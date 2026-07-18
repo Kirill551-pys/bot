@@ -19,7 +19,7 @@ const queryClient = new QueryClient({
 });
 
 function App() {
-  const { user, initData, isReady } = useTelegram();
+  const { initData, isReady } = useTelegram();
 
   if (initData) setupAuth(initData);
 
