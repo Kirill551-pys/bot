@@ -1,0 +1,738 @@
+[
+  {
+    "timestamp": "2026-05-17T12:51:08.481880",
+    "team1": "Juventus",
+    "team2": "Fiorentina",
+    "league": "🇮🇹 Серия A",
+    "prediction": {
+      "home_team": "Juventus",
+      "away_team": "Fiorentina",
+      "timestamp": "2026-05-17T12:51:08.439506",
+      "risk_level": "medium",
+      "result": {
+        "Home Win": 0.36475729895790365,
+        "Draw": 0.3404258427110027,
+        "Away Win": 0.2948168583310936
+      },
+      "total_goals": {
+        "Over 2.5": 0.5034111976623535,
+        "Under 2.5": 0.49658880233764646
+      },
+      "both_scored": {
+        "Yes": 0.5106059610843658,
+        "No": 0.48939403891563416
+      },
+      "recommendation": "📊 Тактически сложный матч",
+      "trust_signal": "🥉 БРОНЗОВЫЙ | Низкая уверенность",
+      "is_hot": false,
+      "hot_confidence": 18.967808635302212,
+      "hot_bet": "Juventus Победа"
+    },
+    "result_confirmed": false,
+    "actual_result": null
+  },
+  {
+    "timestamp": "2026-05-17T12:49:57.934788",
+    "team1": "Roma",
+    "team2": "Lazio",
+    "league": "🇮🇹 Серия A",
+    "prediction": {
+      "home_team": "Roma",
+      "away_team": "Lazio",
+      "timestamp": "2026-05-17T12:49:57.892530",
+      "risk_level": "medium",
+      "result": {
+        "Home Win": 0.3483328332963179,
+        "Draw": 0.2846458432239426,
+        "Away Win": 0.3670213234797395
+      },
+      "total_goals": {
+        "Over 2.5": 0.5013927638530731,
+        "Under 2.5": 0.4986072361469269
+      },
+      "both_scored": {
+        "Yes": 0.5395493805408478,
+        "No": 0.4604506194591522
+      },
+      "recommendation": "📊 Тактически сложный матч",
+      "trust_signal": "🥉 БРОНЗОВЫЙ | Низкая уверенность",
+      "is_hot": false,
+      "hot_confidence": 18.91172087948962,
+      "hot_bet": "Lazio Победа"
+    },
+    "result_confirmed": false,
+    "actual_result": null
+  },
+  {
+    "timestamp": "2026-05-17T12:35:19.704986",
+    "team1": "Barcelona",
+    "team2": "Betis",
+    "league": "🇪🇸 Ла Лига",
+    "prediction": {
+      "home_team": "Barcelona",
+      "away_team": "Betis",
+      "timestamp": "2026-05-17T12:35:19.664889",
+      "risk_level": "medium",
+      "result": {
+        "Home Win": 0.6020900296930515,
+        "Draw": 0.2365485894402904,
+        "Away Win": 0.16136138086665816
+      },
+      "total_goals": {
+        "Over 2.5": 0.4659815192222595,
+        "Under 2.5": 0.5340184807777405
+      },
+      "both_scored": {
+        "Yes": 0.46227691173553465,
+        "No": 0.5377230882644654
+      },
+      "recommendation": "🔴 Фаворит: Barcelona",
+      "trust_signal": "🥉 БРОНЗОВЫЙ | Низкая уверенность",
+      "is_hot": false,
+      "hot_confidence": 41.07074469223541,
+      "hot_bet": "Barcelona Победа"
+    },
+    "result_confirmed": false,
+    "actual_result": null
+  },
+  {
+    "timestamp": "2026-05-17T12:32:38.262155",
+    "team1": "Elche",
+    "team2": "Getafe",
+    "league": "🇪🇸 Ла Лига",
+    "prediction": {
+      "home_team": "Elche",
+      "away_team": "Getafe",
+      "timestamp": "2026-05-17T12:32:38.220209",
+      "risk_level": "medium",
+      "result": {
+        "Home Win": 0.5169144410798421,
+        "Draw": 0.20360363803493553,
+        "Away Win": 0.2794819208852225
+      },
+      "total_goals": {
+        "Over 2.5": 0.4693719744682312,
+        "Under 2.5": 0.5306280255317688
+      },
+      "both_scored": {
+        "Yes": 0.4205949783325195,
+        "No": 0.5794050216674804
+      },
+      "recommendation": "🔴 Фаворит: Elche",
+      "trust_signal": "🥉 БРОНЗОВЫЙ | Низкая уверенность",
+      "is_hot": false,
+      "hot_confidence": 32.968697659830696,
+      "hot_bet": "Elche Победа"
+    },
+    "result_confirmed": false,
+    "actual_result": null
+  },
+  {
+    "timestamp": "2026-05-17T12:30:34.615409",
+    "team1": "Sevilla",
+    "team2": "Real Madrid",
+    "league": "🇪🇸 Ла Лига",
+    "prediction": {
+      "home_team": "Sevilla",
+      "away_team": "Real Madrid",
+      "timestamp": "2026-05-17T12:30:34.573169",
+      "risk_level": "medium",
+      "result": {
+        "Home Win": 0.26043027788300555,
+        "Draw": 0.18093022035847792,
+        "Away Win": 0.5586395017585166
+      },
+      "total_goals": {
+        "Over 2.5": 0.4918292164802551,
+        "Under 2.5": 0.5081707835197449
+      },
+      "both_scored": {
+        "Yes": 0.5322584211826324,
+        "No": 0.46774157881736755
+      },
+      "recommendation": "🔵 Фаворит: Real Madrid",
+      "trust_signal": "🥉 БРОНЗОВЫЙ | Низкая уверенность",
+      "is_hot": false,
+      "hot_confidence": 36.878251804191166,
+      "hot_bet": "Real Madrid Победа"
+    },
+    "result_confirmed": false,
+    "actual_result": null
+  },
+  {
+    "timestamp": "2026-05-17T12:28:33.951293",
+    "team1": "Sociedad",
+    "team2": "Valencia",
+    "league": "🇪🇸 Ла Лига",
+    "prediction": {
+      "home_team": "Sociedad",
+      "away_team": "Valencia",
+      "timestamp": "2026-05-17T12:28:33.909040",
+      "risk_level": "medium",
+      "result": {
+        "Home Win": 0.5481390384304771,
+        "Draw": 0.3270306020334746,
+        "Away Win": 0.12483035953604822
+      },
+      "total_goals": {
+        "Over 2.5": 0.45994214415550233,
+        "Under 2.5": 0.5400578558444977
+      },
+      "both_scored": {
+        "Yes": 0.48899403810501096,
+        "No": 0.511005961894989
+      },
+      "recommendation": "🔴 Фаворит: Sociedad",
+      "trust_signal": "🥉 БРОНЗОВЫЙ | Низкая уверенность",
+      "is_hot": false,
+      "hot_confidence": 34.040205013433926,
+      "hot_bet": "Sociedad Победа"
+    },
+    "result_confirmed": false,
+    "actual_result": null
+  },
+  {
+    "timestamp": "2026-05-17T12:23:01.583786",
+    "team1": "Vallecano",
+    "team2": "Villarreal",
+    "league": "🇪🇸 Ла Лига",
+    "prediction": {
+      "home_team": "Vallecano",
+      "away_team": "Villarreal",
+      "timestamp": "2026-05-17T12:23:01.542046",
+      "risk_level": "medium",
+      "result": {
+        "Home Win": 0.4295112977689185,
+        "Draw": 0.26341803499619515,
+        "Away Win": 0.3070706672348863
+      },
+      "total_goals": {
+        "Over 2.5": 0.4803990006446838,
+        "Under 2.5": 0.5196009993553161
+      },
+      "both_scored": {
+        "Yes": 0.5315816462039947,
+        "No": 0.46841835379600527
+      },
+      "recommendation": "📊 Тактически сложный матч",
+      "trust_signal": "🥉 БРОНЗОВЫЙ | Низкая уверенность",
+      "is_hot": false,
+      "hot_confidence": 25.148783804466888,
+      "hot_bet": "Vallecano Победа"
+    },
+    "result_confirmed": false,
+    "actual_result": null
+  },
+  {
+    "timestamp": "2026-05-17T12:19:41.750883",
+    "team1": "Osasuna",
+    "team2": "Espanol",
+    "league": "🇪🇸 Ла Лига",
+    "prediction": {
+      "home_team": "Osasuna",
+      "away_team": "Espanol",
+      "timestamp": "2026-05-17T12:19:41.710631",
+      "risk_level": "medium",
+      "result": {
+        "Home Win": 0.4586011404318805,
+        "Draw": 0.2376523356894768,
+        "Away Win": 0.3037465238786427
+      },
+      "total_goals": {
+        "Over 2.5": 0.4889959156513214,
+        "Under 2.5": 0.5110040843486786
+      },
+      "both_scored": {
+        "Yes": 0.48688492774963377,
+        "No": 0.5131150722503662
+      },
+      "recommendation": "📊 Тактически сложный матч",
+      "trust_signal": "🥉 БРОНЗОВЫЙ | Низкая уверенность",
+      "is_hot": false,
+      "hot_confidence": 27.575695518191157,
+      "hot_bet": "Osasuna Победа"
+    },
+    "result_confirmed": false,
+    "actual_result": null
+  },
+  {
+    "timestamp": "2026-05-17T12:18:09.270670",
+    "team1": "Ath Bilbao",
+    "team2": "Celta",
+    "league": "🇪🇸 Ла Лига",
+    "prediction": {
+      "home_team": "Ath Bilbao",
+      "away_team": "Celta",
+      "timestamp": "2026-05-17T12:18:09.227798",
+      "risk_level": "medium",
+      "result": {
+        "Home Win": 0.45950125955390647,
+        "Draw": 0.27821595021558937,
+        "Away Win": 0.26228279023050416
+      },
+      "total_goals": {
+        "Over 2.5": 0.44407998919487,
+        "Under 2.5": 0.55592001080513
+      },
+      "both_scored": {
+        "Yes": 0.5147318243980408,
+        "No": 0.48526817560195923
+      },
+      "recommendation": "📊 Тактически сложный матч",
+      "trust_signal": "🥉 БРОНЗОВЫЙ | Низкая уверенность",
+      "is_hot": false,
+      "hot_confidence": 28.413622257844835,
+      "hot_bet": "Ath Bilbao Победа"
+    },
+    "result_confirmed": false,
+    "actual_result": null
+  },
+  {
+    "timestamp": "2026-05-17T12:16:05.601856",
+    "team1": "Newcastle",
+    "team2": "West Ham",
+    "league": "🇬🇧 Англия: Премьер-лига",
+    "prediction": {
+      "home_team": "Newcastle",
+      "away_team": "West Ham",
+      "timestamp": "2026-05-17T12:16:05.463195",
+      "risk_level": "medium",
+      "result": {
+        "Home Win": 0.6967505533341105,
+        "Draw": 0.17364796015365494,
+        "Away Win": 0.12960148651223463
+      },
+      "total_goals": {
+        "Over 2.5": 0.6838806748390198,
+        "Under 2.5": 0.3161193251609802
+      },
+      "both_scored": {
+        "Yes": 0.5923784255981446,
+        "No": 0.4076215744018554
+      },
+      "recommendation": "🔴 Фаворит: Newcastle\n⚽ Ожидается ТБ 2.5",
+      "trust_signal": "🥉 БРОНЗОВЫЙ | Низкая уверенность",
+      "is_hot": true,
+      "hot_confidence": 50.5306054621192,
+      "hot_bet": "Newcastle Победа"
+    },
+    "result_confirmed": false,
+    "actual_result": null
+  },
+  {
+    "timestamp": "2026-05-17T12:07:03.042935",
+    "team1": "Leeds",
+    "team2": "Brighton",
+    "league": "🇬🇧 Англия: Премьер-лига",
+    "prediction": {
+      "home_team": "Leeds",
+      "away_team": "Brighton",
+      "timestamp": "2026-05-17T12:07:03.000433",
+      "risk_level": "medium",
+      "result": {
+        "Home Win": 0.2764125271726746,
+        "Draw": 0.23437264969198549,
+        "Away Win": 0.4892148231353399
+      },
+      "total_goals": {
+        "Over 2.5": 0.5617527008056641,
+        "Under 2.5": 0.4382472991943359
+      },
+      "both_scored": {
+        "Yes": 0.4365119606256485,
+        "No": 0.5634880393743515
+      },
+      "recommendation": "🔵 Фаворит: Brighton",
+      "trust_signal": "🥉 БРОНЗОВЫЙ | Низкая уверенность",
+      "is_hot": false,
+      "hot_confidence": 30.844810035646955,
+      "hot_bet": "Brighton Победа"
+    },
+    "result_confirmed": false,
+    "actual_result": null
+  },
+  {
+    "timestamp": "2026-05-17T12:05:37.880702",
+    "team1": "Wolves",
+    "team2": "Fulham",
+    "league": "🇬🇧 Англия: Премьер-лига",
+    "prediction": {
+      "home_team": "Wolves",
+      "away_team": "Fulham",
+      "timestamp": "2026-05-17T12:05:37.839111",
+      "risk_level": "medium",
+      "result": {
+        "Home Win": 0.2728954299989791,
+        "Draw": 0.2340869795896416,
+        "Away Win": 0.4930175904113792
+      },
+      "total_goals": {
+        "Over 2.5": 0.5947767972946167,
+        "Under 2.5": 0.40522320270538326
+      },
+      "both_scored": {
+        "Yes": 0.5400404393672943,
+        "No": 0.4599595606327057
+      },
+      "recommendation": "🔵 Фаворит: Fulham",
+      "trust_signal": "🥉 БРОНЗОВЫЙ | Низкая уверенность",
+      "is_hot": false,
+      "hot_confidence": 31.254544332940963,
+      "hot_bet": "Fulham Победа"
+    },
+    "result_confirmed": false,
+    "actual_result": null
+  },
+  {
+    "timestamp": "2026-05-17T12:03:43.396118",
+    "team1": "Brentford",
+    "team2": "Crystal Palace",
+    "league": "🇬🇧 Англия: Премьер-лига",
+    "prediction": {
+      "home_team": "Brentford",
+      "away_team": "Crystal Palace",
+      "timestamp": "2026-05-17T12:03:43.353183",
+      "risk_level": "medium",
+      "result": {
+        "Home Win": 0.29991654804297696,
+        "Draw": 0.4219043623878246,
+        "Away Win": 0.27817908956919846
+      },
+      "total_goals": {
+        "Over 2.5": 0.5256843209266663,
+        "Under 2.5": 0.4743156790733337
+      },
+      "both_scored": {
+        "Yes": 0.5923784255981446,
+        "No": 0.4076215744018554
+      },
+      "recommendation": "📊 Тактически сложный матч",
+      "trust_signal": "🥉 БРОНЗОВЫЙ | Низкая уверенность",
+      "is_hot": false,
+      "hot_confidence": 24.754852549736658,
+      "hot_bet": "Ничья"
+    },
+    "result_confirmed": false,
+    "actual_result": null
+  },
+  {
+    "timestamp": "2026-05-17T12:01:40.373121",
+    "team1": "Man United",
+    "team2": "Nott'm Forest",
+    "league": "🇬🇧 Англия: Премьер-лига",
+    "prediction": {
+      "home_team": "Man United",
+      "away_team": "Nott'm Forest",
+      "timestamp": "2026-05-17T12:01:40.285756",
+      "risk_level": "medium",
+      "result": {
+        "Home Win": 0.5837336294019094,
+        "Draw": 0.1837374788002184,
+        "Away Win": 0.23252889179787228
+      },
+      "total_goals": {
+        "Over 2.5": 0.5617527008056641,
+        "Under 2.5": 0.4382472991943359
+      },
+      "both_scored": {
+        "Yes": 0.536502581834793,
+        "No": 0.46349741816520695
+      },
+      "recommendation": "🔴 Фаворит: Man United",
+      "trust_signal": "🥉 БРОНЗОВЫЙ | Низкая уверенность",
+      "is_hot": false,
+      "hot_confidence": 39.722823598216586,
+      "hot_bet": "Man United Победа"
+    },
+    "result_confirmed": false,
+    "actual_result": null
+  },
+  {
+    "timestamp": "2026-05-07T14:14:12.808448",
+    "team1": "Arsenal",
+    "team2": "Fulham",
+    "league": "🇬🇧 Англия: Премьер-лига",
+    "prediction": {
+      "home_team": "Arsenal",
+      "away_team": "Fulham",
+      "timestamp": "2026-05-07T14:14:12.725444",
+      "risk_level": "medium",
+      "result": {
+        "Home Win": 0.6535208758082784,
+        "Draw": 0.14165131506153195,
+        "Away Win": 0.20482780913018966
+      },
+      "total_goals": {
+        "Over 2.5": 0.6008712887763977,
+        "Under 2.5": 0.3991287112236023
+      },
+      "both_scored": {
+        "Yes": 0.5989935636520386,
+        "No": 0.4010064363479614
+      },
+      "recommendation": "🔴 Фаворит: Arsenal",
+      "trust_signal": "🥉 БРОНЗОВЫЙ | Низкая уверенность",
+      "is_hot": false,
+      "hot_confidence": 46.136835790756585,
+      "hot_bet": "Arsenal Победа"
+    },
+    "result_confirmed": false,
+    "actual_result": null
+  },
+  {
+    "timestamp": "2026-05-07T14:12:02.121640",
+    "team1": "Brentford",
+    "team2": "West Ham",
+    "league": "🇬🇧 Англия: Премьер-лига",
+    "prediction": {
+      "home_team": "Brentford",
+      "away_team": "West Ham",
+      "timestamp": "2026-05-07T14:12:02.036819",
+      "risk_level": "medium",
+      "result": {
+        "Home Win": 0.5125181906106409,
+        "Draw": 0.2305438359433642,
+        "Away Win": 0.25693797344599484
+      },
+      "total_goals": {
+        "Over 2.5": 0.5775749325752259,
+        "Under 2.5": 0.42242506742477415
+      },
+      "both_scored": {
+        "Yes": 0.5690374612808228,
+        "No": 0.4309625387191772
+      },
+      "recommendation": "🔴 Фаворит: Brentford",
+      "trust_signal": "🥉 БРОНЗОВЫЙ | Низкая уверенность",
+      "is_hot": false,
+      "hot_confidence": 33.29331604547142,
+      "hot_bet": "Brentford Победа"
+    },
+    "result_confirmed": false,
+    "actual_result": null
+  },
+  {
+    "timestamp": "2026-05-07T13:25:13.012977",
+    "team1": "Leeds",
+    "team2": "Burnley",
+    "league": "🇬🇧 Англия: Премьер-лига",
+    "prediction": {
+      "home_team": "Leeds",
+      "away_team": "Burnley",
+      "timestamp": "2026-05-07T13:25:12.898209",
+      "risk_level": "medium",
+      "result": {
+        "Home Win": 0.29736026649525304,
+        "Draw": 0.25133116853029225,
+        "Away Win": 0.4513085649744547
+      },
+      "total_goals": {
+        "Over 2.5": 0.6683327674865722,
+        "Under 2.5": 0.3316672325134278
+      },
+      "both_scored": {
+        "Yes": 0.43608087599277495,
+        "No": 0.563919124007225
+      },
+      "recommendation": "📊 Тактически сложный матч",
+      "trust_signal": "🥉 БРОНЗОВЫЙ | Низкая уверенность",
+      "is_hot": false,
+      "hot_confidence": 27.183877203098785,
+      "hot_bet": "Burnley Победа"
+    },
+    "result_confirmed": false,
+    "actual_result": null
+  },
+  {
+    "timestamp": "2026-04-12T17:09:31.474864",
+    "team1": "Paris SG",
+    "team2": "Brest",
+    "league": "🇫🇷 Лига 1",
+    "prediction": {
+      "home_team": "Paris SG",
+      "away_team": "Brest",
+      "timestamp": "2026-04-12T17:09:31.441922",
+      "risk_level": "medium",
+      "result": {
+        "Home Win": 0.6125099317102034,
+        "Draw": 0.1794468991418636,
+        "Away Win": 0.20804316914793292
+      },
+      "total_goals": {
+        "Over 2.5": 0.5991546154022217,
+        "Under 2.5": 0.4008453845977783
+      },
+      "both_scored": {
+        "Yes": 0.5292199909687042,
+        "No": 0.4707800090312958
+      },
+      "recommendation": "🔴 Фаворит: Paris SG",
+      "trust_signal": "🥉 БРОНЗОВЫЙ | Низкая уверенность",
+      "is_hot": false,
+      "hot_confidence": 42.75949946237829,
+      "hot_bet": "Paris SG Победа"
+    },
+    "result_confirmed": false,
+    "actual_result": null
+  },
+  {
+    "timestamp": "2026-04-12T17:08:41.574159",
+    "team1": "Bayern Munich",
+    "team2": "Dortmund",
+    "league": "🇩🇪 Бундеслига",
+    "prediction": {
+      "home_team": "Bayern Munich",
+      "away_team": "Dortmund",
+      "timestamp": "2026-04-12T17:08:41.541143",
+      "risk_level": "medium",
+      "result": {
+        "Home Win": 0.5580201249834614,
+        "Draw": 0.23017160288014543,
+        "Away Win": 0.21180827213639314
+      },
+      "total_goals": {
+        "Over 2.5": 0.6303465843200684,
+        "Under 2.5": 0.3696534156799316
+      },
+      "both_scored": {
+        "Yes": 0.6179281234741211,
+        "No": 0.38207187652587893
+      },
+      "recommendation": "🔴 Фаворит: Bayern Munich",
+      "trust_signal": "🥉 БРОНЗОВЫЙ | Низкая уверенность",
+      "is_hot": false,
+      "hot_confidence": 37.73646191227255,
+      "hot_bet": "Bayern Munich Победа"
+    },
+    "result_confirmed": false,
+    "actual_result": null
+  },
+  {
+    "timestamp": "2026-04-12T17:08:25.986953",
+    "team1": "Everton",
+    "team2": "Brentford",
+    "league": "🇬🇧 Англия: Премьер-лига",
+    "prediction": {
+      "home_team": "Everton",
+      "away_team": "Brentford",
+      "timestamp": "2026-04-12T17:08:25.953887",
+      "risk_level": "medium",
+      "result": {
+        "Home Win": 0.3391332145286682,
+        "Draw": 0.26456181776589516,
+        "Away Win": 0.39630496770543666
+      },
+      "total_goals": {
+        "Over 2.5": 0.5506453275680542,
+        "Under 2.5": 0.4493546724319458
+      },
+      "both_scored": {
+        "Yes": 0.5598631262779236,
+        "No": 0.44013687372207644
+      },
+      "recommendation": "📊 Тактически сложный матч",
+      "trust_signal": "🥉 БРОНЗОВЫЙ | Низкая уверенность",
+      "is_hot": false,
+      "hot_confidence": 21.530400980574885,
+      "hot_bet": "Brentford Победа"
+    },
+    "result_confirmed": false,
+    "actual_result": null
+  },
+  {
+    "timestamp": "2026-04-12T17:07:19.870996",
+    "team1": "Zenit",
+    "team2": "Krasnodar",
+    "league": "🇷🇺 РПЛ",
+    "prediction": {
+      "home_team": "Zenit",
+      "away_team": "Krasnodar",
+      "timestamp": "2026-04-12T17:07:19.847568",
+      "risk_level": "medium",
+      "result": {
+        "Home Win": 0.3947680942523136,
+        "Draw": 0.4268117306021134,
+        "Away Win": 0.17842017514557304
+      },
+      "total_goals": {
+        "Over 2.5": 0.4486284613609314,
+        "Under 2.5": 0.5513715386390686
+      },
+      "both_scored": {
+        "Yes": 0.5388648271560669,
+        "No": 0.4611351728439331
+      },
+      "recommendation": "📊 Тактически сложный матч",
+      "trust_signal": "🥉 БРОНЗОВЫЙ | Низкая уверенность",
+      "is_hot": false,
+      "hot_confidence": 22.301895620599666,
+      "hot_bet": "Ничья"
+    },
+    "result_confirmed": false,
+    "actual_result": null
+  },
+  {
+    "timestamp": "2026-04-12T16:32:05.445729",
+    "team1": "Zenit",
+    "team2": "Krasnodar",
+    "league": "🇷🇺 РПЛ",
+    "prediction": {
+      "home_team": "Zenit",
+      "away_team": "Krasnodar",
+      "timestamp": "2026-04-12T16:32:05.397929",
+      "risk_level": "medium",
+      "result": {
+        "Home Win": 0.3947680942523136,
+        "Draw": 0.4268117306021134,
+        "Away Win": 0.17842017514557304
+      },
+      "total_goals": {
+        "Over 2.5": 0.4486284613609314,
+        "Under 2.5": 0.5513715386390686
+      },
+      "both_scored": {
+        "Yes": 0.5388648271560669,
+        "No": 0.4611351728439331
+      },
+      "recommendation": "📊 Тактически сложный матч",
+      "trust_signal": "🥉 БРОНЗОВЫЙ | Низкая уверенность",
+      "is_hot": false,
+      "hot_confidence": 22.301895620599666,
+      "hot_bet": "Ничья"
+    },
+    "result_confirmed": false,
+    "actual_result": null
+  },
+  {
+    "timestamp": "2026-04-12T16:13:41.881829",
+    "team1": "Everton",
+    "team2": "Crystal Palace",
+    "league": "🇬🇧 Англия: Премьер-лига",
+    "prediction": {
+      "home_team": "Everton",
+      "away_team": "Crystal Palace",
+      "timestamp": "2026-04-12T16:13:41.827810",
+      "risk_level": "medium",
+      "result": {
+        "Home Win": 0.2659829802936606,
+        "Draw": 0.4595832932199896,
+        "Away Win": 0.27443372648634984
+      },
+      "total_goals": {
+        "Over 2.5": 0.5256843209266663,
+        "Under 2.5": 0.4743156790733337
+      },
+      "both_scored": {
+        "Yes": 0.5923784255981446,
+        "No": 0.4076215744018554
+      },
+      "recommendation": "📊 Тактически сложный матч",
+      "trust_signal": "🥉 БРОНЗОВЫЙ | Низкая уверенность",
+      "is_hot": false,
+      "hot_confidence": 28.533651663008673,
+      "hot_bet": "Ничья"
+    },
+    "result_confirmed": false,
+    "actual_result": null
+  }
+]
