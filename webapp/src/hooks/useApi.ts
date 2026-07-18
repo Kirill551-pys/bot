@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../api/client';
-import type { Prediction, League, HotPrediction } from '../api/client';
 
 // ==================== ЛИГИ ====================
 
