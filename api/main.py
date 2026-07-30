@@ -47,6 +47,13 @@ MODELS = {}
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
 
 def load_all_models():
+    import sys
+    print("="*60, flush=True)
+    print(f"🔍 ПРОВЕРКА ПУТЕЙ НА RENDER", flush=True)
+    print(f"📂 DATA_DIR существует: {os.path.exists(DATA_DIR)}", flush=True)
+    if os.path.exists(DATA_DIR):
+        print(f"📂 Содержимое DATA_DIR: {os.listdir(DATA_DIR)}", flush=True)
+    print("="*60, flush=True)
     """Загружает все модели при старте"""
     for folder, display_name in LEAGUES.items():
         data_path = os.path.join(DATA_DIR, folder, 'matches.csv')
@@ -92,7 +99,7 @@ def load_all_models():
             print(f"❌ Ошибка загрузки {folder}: {e}")
             import traceback
             traceback.print_exc() # Полезно для отладки, если что-то пойдёт не так
-            
+
 def startup():
     init_db()
     load_all_models()
