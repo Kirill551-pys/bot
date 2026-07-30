@@ -545,131 +545,136 @@ def save_model(model_data: dict, filepath: str) -> bool:
         logger.error(f"❌ Ошибка сохранения: {e}")
         return False
 
-def load_model(filepath: str) -> Optional[dict]:
-    if not os.path.exists(filepath): 
-        return None
+# ==================== ЗАГРУЗКА ДАННЫХ ====================
+def safe_convert_goals(col):
+    """Безопасная конвертация голов в числа"""
     try:
-        model_data = joblib.load(filepath)
-        
-        # 🔥 КРИТИЧЕСКАЯ ПРОВЕРКА ВЕРСИИ
-        # Если модель была обучена на 20 фичах (старая версия), мы её удаляем и заставляем переобучиться
-        if model_data.get('version') != '2.2':
-            logger.warning(f"⚠️ Найдена устаревшая модель {filepath} (v{model_data.get('version')}). Удаляем для переобучения...")
-            os.remove(filepath)
-            return None
-            
-        logger.info(f"✅ Модель загружена: {filepath}")
-        return model_data
-    except Exception as e:
-        logger.error(f"❌ Ошибка загрузки: {e}")
-        # Если файл битый, тоже удаляем его, чтобы не мешал
-        try:
-            os.remove(filepath)
-        except:
-            pass
+        if col.dtype == 'object':
+            col = col.astype(str).str.strip().str.replace(',', '.').str.replace('–', '-').str.replace('—', '-')
+            col = col.replace(['', '-', '–', '—', 'nan', 'NaN', 'None', ' ', 'null', 'NULL'], '0')
+        return pd.to_numeric(col, errors='coerce').fillna(0).astype(int)
+    except Exception:
+        return pd.Series([0] * len(col), dtype=int)
+
+def load_matches_data(data_path: str) -> Optional[pd.DataFrame]:
+    logger.info(f"📥 Загрузка данных из {data_path}")
+    if not os.path.exists(data_path):
+        logger.error(f"❌ Файл не найден: {data_path}")
         return None
-
-# ==================== СТАТИСТИКА ДЛЯ UI ====================
-def calculate_team_statistics(df: pd.DataFrame, team_name: str, max_matches: int = 50, season_start_date: str = "2025-08-01") -> dict:
-    if df is None or len(df) == 0 or not team_name: return {}
     
-    if 'date' in df.columns and season_start_date:
-        df = df[df['date'] >= pd.to_datetime(season_start_date)].copy()
+    encodings = ['utf-8', 'cp1252', 'latin1', 'cp1251', 'utf-8-sig']
+    df = None
     
-    team_matches = df[(df['home_team'] == team_name) | (df['away_team'] == team_name)].sort_values('date', ascending=False).head(max_matches)
-    if len(team_matches) == 0: return {}
-    
-    stats = {
-        'matches_played': len(team_matches),
-        'home_matches': len(team_matches[team_matches['home_team'] == team_name]),
-        'away_matches': len(team_matches[team_matches['away_team'] == team_name]),
-    }
-    
-    goals_for, goals_against = [], []
-    for _, m in team_matches.iterrows():
-        if m['home_team'] == team_name:
-            goals_for.append(m.get('home_goals', 0)); goals_against.append(m.get('away_goals', 0))
-        else:
-            goals_for.append(m.get('away_goals', 0)); goals_against.append(m.get('home_goals', 0))
+    for enc in encodings:
+        try:
+            with open(data_path, 'r', encoding=enc) as f:
+                first_lines = [f.readline() for _ in range(5)]
+            skip_rows = sum(1 for line in first_lines if line.strip().startswith('#') or line.strip() == '')
             
-    stats['avg_goals_for'] = round(np.mean(goals_for), 2) if goals_for else 0
-    stats['avg_goals_against'] = round(np.mean(goals_against), 2) if goals_against else 0
-    stats['total_goals_avg'] = round(np.mean([a+b for a,b in zip(goals_for, goals_against)]), 2)
+            df = pd.read_csv(data_path, encoding=enc, skiprows=skip_rows, on_bad_lines='warn', engine='python')
+            df.columns = df.columns.str.strip() # Убираем пробелы в названиях колонок
+            logger.info(f"✅ Файл прочитан (кодировка: {enc})")
+            break
+        except Exception as e:
+            logger.debug(f"   Кодировка {enc} не подошла: {str(e)[:50]}")
+            continue
     
-    totals = [a+b for a,b in zip(goals_for, goals_against)]
-    stats['over_2_5_pct'] = round(sum(1 for t in totals if t > 2.5) / len(totals) * 100, 1) if totals else 0
-    stats['over_3_5_pct'] = round(sum(1 for t in totals if t > 3.5) / len(totals) * 100, 1) if totals else 0
-    stats['under_2_5_pct'] = round(100 - stats['over_2_5_pct'], 1)
+    if df is None or len(df) == 0:
+        logger.error(f"❌ Не удалось прочитать файл или он пуст")
+        return None
     
-    btts_yes = sum(1 for gf, ga in zip(goals_for, goals_against) if gf > 0 and ga > 0)
-    stats['btts_yes_pct'] = round(btts_yes / len(totals) * 100, 1) if totals else 0
-    stats['btts_no_pct'] = round(100 - stats['btts_yes_pct'], 1)
+    # 1. Дата
+    date_col = next((col for col in df.columns if 'date' in col.lower()), None)
+    if date_col:
+        df[date_col] = pd.to_datetime(df[date_col], errors='coerce', dayfirst=True)
+        df = df.rename(columns={date_col: 'date'})
+        df = df.dropna(subset=['date']).sort_values('date').reset_index(drop=True)
+    else:
+        logger.error("❌ Колонка с датой не найдена!")
+        return None
     
-    # Угловые
-    if 'home_corners' in df.columns:
-        c_for, c_ag = [], []
-        for _, m in team_matches.iterrows():
-            if m['home_team'] == team_name: c_for.append(m.get('home_corners', 0)); c_ag.append(m.get('away_corners', 0))
-            else: c_for.append(m.get('away_corners', 0)); c_ag.append(m.get('home_corners', 0))
-        stats['avg_corners_for'] = round(np.mean(c_for), 1) if c_for else 0
-        stats['total_corners_avg'] = round(np.mean([a+b for a,b in zip(c_for, c_ag)]), 1)
-        ct = [a+b for a,b in zip(c_for, c_ag)]
-        stats['corners_over_9_5_pct'] = round(sum(1 for c in ct if c > 9.5) / len(ct) * 100, 1) if ct else 0
-        stats['corners_over_10_5_pct'] = round(sum(1 for c in ct if c > 10.5) / len(ct) * 100, 1) if ct else 0
-
-    # Карточки
-    if 'home_yellows' in df.columns:
-        y_for, y_ag = [], []
-        for _, m in team_matches.iterrows():
-            if m['home_team'] == team_name: y_for.append(m.get('home_yellows', 0)); y_ag.append(m.get('away_yellows', 0))
-            else: y_for.append(m.get('away_yellows', 0)); y_ag.append(m.get('home_yellows', 0))
-        stats['avg_yellows_for'] = round(np.mean(y_for), 1) if y_for else 0
-        stats['total_yellows_avg'] = round(np.mean([a+b for a,b in zip(y_for, y_ag)]), 1)
-        yt = [a+b for a,b in zip(y_for, y_ag)]
-        stats['yellows_over_3_5_pct'] = round(sum(1 for y in yt if y > 3.5) / len(yt) * 100, 1) if yt else 0
-        stats['yellows_over_4_5_pct'] = round(sum(1 for y in yt if y > 4.5) / len(yt) * 100, 1) if yt else 0
-
-    # 🔥 Удары
-    if 'home_shots' in df.columns:
-        s_for, s_ag = [], []
-        for _, m in team_matches.iterrows():
-            if m['home_team'] == team_name: s_for.append(m.get('home_shots', 0)); s_ag.append(m.get('away_shots', 0))
-            else: s_for.append(m.get('away_shots', 0)); s_ag.append(m.get('home_shots', 0))
-        stats['avg_shots_for'] = round(np.mean(s_for), 1) if s_for else 0
-        stats['total_shots_avg'] = round(np.mean([a+b for a,b in zip(s_for, s_ag)]), 1)
-
-    # 🔥 Удары в створ
-    if 'home_shots_on_target' in df.columns:
-        sot_for, sot_ag = [], []
-        for _, m in team_matches.iterrows():
-            if m['home_team'] == team_name: sot_for.append(m.get('home_shots_on_target', 0)); sot_ag.append(m.get('away_shots_on_target', 0))
-            else: sot_for.append(m.get('away_shots_on_target', 0)); sot_ag.append(m.get('home_shots_on_target', 0))
-        stats['avg_sot_for'] = round(np.mean(sot_for), 1) if sot_for else 0
-        stats['total_sot_avg'] = round(np.mean([a+b for a,b in zip(sot_for, sot_ag)]), 1)
-
-    # 🔥 Фолы
-    if 'home_fouls' in df.columns:
-        f_for, f_ag = [], []
-        for _, m in team_matches.iterrows():
-            if m['home_team'] == team_name: f_for.append(m.get('home_fouls', 0)); f_ag.append(m.get('away_fouls', 0))
-            else: f_for.append(m.get('away_fouls', 0)); f_ag.append(m.get('home_fouls', 0))
-        stats['avg_fouls_for'] = round(np.mean(f_for), 1) if f_for else 0
-        stats['total_fouls_avg'] = round(np.mean([a+b for a,b in zip(f_for, f_ag)]), 1)
-
-    # Форма
-    recent = team_matches.head(5)
-    points = 0
-    for _, m in recent.iterrows():
-        if m['home_team'] == team_name:
-            if m['home_goals'] > m['away_goals']: points += 3
-            elif m['home_goals'] == m['away_goals']: points += 1
-        else:
-            if m['away_goals'] > m['home_goals']: points += 3
-            elif m['away_goals'] == m['home_goals']: points += 1
-    stats['form_points'] = points
-    stats['form_pct'] = round(points / 15 * 100, 1)
+    # 2. Маппинг колонок
+    rename_map = {}
+    if 'HomeTeam' in df.columns: rename_map['HomeTeam'] = 'home_team'
+    elif 'Home' in df.columns: rename_map['Home'] = 'home_team'
     
-    return stats
+    if 'AwayTeam' in df.columns: rename_map['AwayTeam'] = 'away_team'
+    elif 'Away' in df.columns: rename_map['Away'] = 'away_team'
+    
+    if 'FTHG' in df.columns: rename_map['FTHG'] = 'home_goals'
+    elif 'HG' in df.columns: rename_map['HG'] = 'home_goals'
+    
+    if 'FTAG' in df.columns: rename_map['FTAG'] = 'away_goals'
+    elif 'AG' in df.columns: rename_map['AG'] = 'away_goals'
+    
+    stat_mappings = {
+        'HS': 'home_shots', 'AS': 'away_shots',
+        'HST': 'home_shots_on_target', 'AST': 'away_shots_on_target',
+        'HC': 'home_corners', 'AC': 'away_corners',
+        'HY': 'home_yellows', 'AY': 'away_yellows',
+        'HF': 'home_fouls', 'AF': 'away_fouls',
+        'HTHG': 'ht_home_goals', 'HTAG': 'ht_away_goals',
+        'HTR': 'ht_result'
+    }
+    for src, dst in stat_mappings.items():
+        if src in df.columns and dst not in df.columns:
+            rename_map[src] = dst
+            
+    if rename_map:
+        df = df.rename(columns=rename_map)
+
+    # 3. Критическая проверка
+    if 'home_team' not in df.columns or 'away_team' not in df.columns:
+        logger.error(f"❌ Ошибка в {os.path.basename(data_path)}: нет home_team/away_team. Колонки: {list(df.columns)[:10]}...")
+        return None
+    
+    # 4. Безопасная конвертация голов
+    df['home_goals'] = safe_convert_goals(df.get('home_goals', pd.Series([0]*len(df))))
+    df['away_goals'] = safe_convert_goals(df.get('away_goals', pd.Series([0]*len(df))))
+    df = df[(df['home_goals'] <= 15) & (df['away_goals'] <= 15)]
+    
+    # 5. Расчёт дней отдыха (в блоке try-except, чтобы не ронять весь сервер)
+    try:
+        df = calculate_rest_days(df)
+    except Exception as e:
+        logger.warning(f"⚠️ Ошибка расчёта дней отдыха в {os.path.basename(data_path)}: {e}. Пропускаем этот шаг.")
+        df['home_rest_days'] = 7
+        df['away_rest_days'] = 7
+    
+    logger.info(f"✅ Загружено {len(df)} матчей")
+    return df
+
+
+def calculate_rest_days(df: pd.DataFrame) -> pd.DataFrame:
+    """Безопасный расчёт дней отдыха между матчами"""
+    df = df.sort_values('date').copy()
+    df['home_rest_days'] = 7
+    df['away_rest_days'] = 7
+    
+    if 'home_team' not in df.columns or 'away_team' not in df.columns:
+        return df
+        
+    all_teams = set(df['home_team'].dropna()) | set(df['away_team'].dropna())
+    
+    for team in all_teams:
+        team_matches = df[
+            (df['home_team'] == team) | (df['away_team'] == team)
+        ].sort_values('date')
+        
+        if len(team_matches) < 2:
+            continue
+        
+        prev_date = None
+        for idx in team_matches.index:
+            if prev_date is not None:
+                rest_days = (team_matches.loc[idx, 'date'] - prev_date).days
+                if team_matches.loc[idx, 'home_team'] == team:
+                    df.loc[idx, 'home_rest_days'] = rest_days
+                else:
+                    df.loc[idx, 'away_rest_days'] = rest_days
+            prev_date = team_matches.loc[idx, 'date']
+    
+    return df
 
 def get_league_rankings(df: pd.DataFrame, stat_type: str = 'corners', top_n: int = 3, season_start_date: str = "2025-08-01") -> list:
     if 'date' in df.columns and season_start_date:
