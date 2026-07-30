@@ -79,7 +79,7 @@ def startup():
     load_all_models()
 
 # ==================== АВТОРИЗАЦИЯ ====================
-def get_current_user(x_telegram_init_data: str = Header(...)) -> dict:
+def get_current_user(x_telegram_init_data: str = Header(None, alias="X-Telegram-Init-Data")) -> dict:
     return verify_telegram_init_data(x_telegram_init_data)
 
 # ==================== МОДЕЛИ ДАННЫХ ====================
