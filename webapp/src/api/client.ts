@@ -41,6 +41,29 @@ export interface Prediction {
     'Over 4.5': number;
     'Under 4.5': number;
   };
+   first_half_result?: {
+    'Home Win': number;
+    'Draw': number;
+    'Away Win': number;
+  };
+  total_shots?: {
+    'Over 22.5': number;
+    'Under 22.5': number;
+  };
+  total_shots_on_target?: {
+    'Over 8.5': number;
+    'Under 8.5': number;
+  };
+  total_fouls?: {
+    'Over 23.5': number;
+    'Under 23.5': number;
+  };
+  btts_first_half?:{
+    'Yes': number;
+    'No': number;
+  };
+  individual_totals?: Record<string, number>; 
+
   recommendation: string;
   trust_signal: string;
   is_hot: boolean;
