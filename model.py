@@ -71,7 +71,6 @@ def validate_training_data(df: pd.DataFrame) -> tuple:
         return False, issues
     
     return len([i for i in issues if i.startswith('❌')]) == 0, issues
-
 # ==================== ЗАГРУЗКА ДАННЫХ ====================
 def load_matches_data(data_path: str) -> Optional[pd.DataFrame]:
     logger.info(f"📥 Загрузка данных из {data_path}")
@@ -89,12 +88,15 @@ def load_matches_data(data_path: str) -> Optional[pd.DataFrame]:
             skip_rows = sum(1 for line in first_lines if line.strip().startswith('#') or line.strip() == '')
             
             df = pd.read_csv(data_path, encoding=enc, skiprows=skip_rows, on_bad_lines='warn', engine='python')
+            # Очищаем названия колонок от лишних пробелов
+            df.columns = df.columns.str.strip()
             logger.info(f"✅ Файл прочитан (кодировка: {enc})")
             break
         except Exception:
             continue
     
     if df is None:
+        logger.error(f"❌ Не удалось прочитать файл")
         return None
     
     date_col = next((col for col in df.columns if 'date' in col.lower()), None)
@@ -102,15 +104,30 @@ def load_matches_data(data_path: str) -> Optional[pd.DataFrame]:
         df[date_col] = pd.to_datetime(df[date_col], errors='coerce', dayfirst=True)
         df = df.rename(columns={date_col: 'date'})
     else:
+        logger.error("❌ Колонка с датой не найдена!")
         return None
     
     df = df.dropna(subset=['date']).sort_values('date').reset_index(drop=True)
     
-    # 🔥 ПОЛНЫЙ МАППИНГ КОЛОНОК
-    mappings = {
-        'HomeTeam': 'home_team', 'AwayTeam': 'away_team',
-        'FTHG': 'home_goals', 'FTAG': 'away_goals',
-        'HG': 'home_goals', 'AG': 'away_goals',
+    # 🔥 НАДЕЖНЫЙ МАППИНГ КОЛОНОК
+    rename_map = {}
+    
+    # 1. Команды
+    if 'HomeTeam' in df.columns and 'home_team' not in df.columns: rename_map['HomeTeam'] = 'home_team'
+    elif 'Home' in df.columns and 'home_team' not in df.columns: rename_map['Home'] = 'home_team'
+    
+    if 'AwayTeam' in df.columns and 'away_team' not in df.columns: rename_map['AwayTeam'] = 'away_team'
+    elif 'Away' in df.columns and 'away_team' not in df.columns: rename_map['Away'] = 'away_team'
+    
+    # 2. Голы
+    if 'FTHG' in df.columns and 'home_goals' not in df.columns: rename_map['FTHG'] = 'home_goals'
+    elif 'HG' in df.columns and 'home_goals' not in df.columns: rename_map['HG'] = 'home_goals'
+    
+    if 'FTAG' in df.columns and 'away_goals' not in df.columns: rename_map['FTAG'] = 'away_goals'
+    elif 'AG' in df.columns and 'away_goals' not in df.columns: rename_map['AG'] = 'away_goals'
+    
+    # 3. Статистика (если есть)
+    stat_mappings = {
         'HS': 'home_shots', 'AS': 'away_shots',
         'HST': 'home_shots_on_target', 'AST': 'away_shots_on_target',
         'HC': 'home_corners', 'AC': 'away_corners',
@@ -119,10 +136,19 @@ def load_matches_data(data_path: str) -> Optional[pd.DataFrame]:
         'HTHG': 'ht_home_goals', 'HTAG': 'ht_away_goals',
         'HTR': 'ht_result'
     }
-    
-    column_mapping = {src: dst for src, dst in mappings.items() if src in df.columns and dst not in df.columns}
-    if column_mapping:
-        df = df.rename(columns=column_mapping)
+    for src, dst in stat_mappings.items():
+        if src in df.columns and dst not in df.columns:
+            rename_map[src] = dst
+            
+    if rename_map:
+        df = df.rename(columns=rename_map)
+        logger.info(f"   ↳ Переименованы колонки: {list(rename_map.values())}")
+
+    # 🔥 КРИТИЧЕСКАЯ ПРОВЕРКА
+    if 'home_team' not in df.columns or 'away_team' not in df.columns:
+        logger.error(f"❌ Ошибка в {os.path.basename(data_path)}: не найдены 'home_team' или 'away_team'.")
+        logger.error(f"   Реальные колонки в файле: {list(df.columns)}")
+        return None
     
     df['home_goals'] = safe_convert_goals(df.get('home_goals', 0))
     df['away_goals'] = safe_convert_goals(df.get('away_goals', 0))
@@ -132,14 +158,25 @@ def load_matches_data(data_path: str) -> Optional[pd.DataFrame]:
     logger.info(f"✅ Загружено {len(df)} матчей")
     return df
 
+
 def calculate_rest_days(df: pd.DataFrame) -> pd.DataFrame:
+    """Расчёт дней отдыха между матчами"""
     df = df.sort_values('date').copy()
     df['home_rest_days'] = 7
     df['away_rest_days'] = 7
     
+    # Безопасная проверка перед доступом к колонкам
+    if 'home_team' not in df.columns or 'away_team' not in df.columns:
+        logger.warning("⚠️ Пропуск расчета дней отдыха: нет колонок home_team/away_team")
+        return df
+        
     all_teams = set(df['home_team'].dropna()) | set(df['away_team'].dropna())
+    
     for team in all_teams:
-        team_matches = df[(df['home_team'] == team) | (df['away_team'] == team)].sort_values('date')
+        team_matches = df[
+            (df['home_team'] == team) | (df['away_team'] == team)
+        ].sort_values('date')
+        
         if len(team_matches) < 2:
             continue
         
@@ -152,6 +189,8 @@ def calculate_rest_days(df: pd.DataFrame) -> pd.DataFrame:
                 else:
                     df.loc[idx, 'away_rest_days'] = rest_days
             prev_date = team_matches.loc[idx, 'date']
+    
+    logger.info("✅ Дни отдыха рассчитаны")
     return df
 
 def find_similar_team(team_name: str, all_teams: List[str], threshold: float = 0.65) -> Optional[str]:
