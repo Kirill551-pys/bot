@@ -24,6 +24,10 @@ from auth import verify_telegram_init_data
 
 app = FastAPI(title="Football Predictor API", version="2.0")
 
+@app.get("/")
+def root():
+    return {"status": "ok", "message": "Football Predictor API is running"}
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
