@@ -56,28 +56,43 @@ def load_all_models():
             continue
         
         try:
+            model_data = None
+            
+            # 1. Пытаемся загрузить существующую модель
             if os.path.exists(model_path):
                 model_data = load_model(model_path)
-            else:
+            
+            # 2. Если модели нет или она была удалена как старая (вернула None), обучаем новую
+            if model_data is None:
+                print(f"⚠️ Модель для {display_name} отсутствует или устарела. Начинаем обучение...")
                 df = load_matches_data(data_path)
+                
                 if df is not None and len(df) > 50:
                     model_data = train_models(df)
-                    save_model(model_data, model_path)
+                    if model_data is not None:
+                        save_model(model_data, model_path)
+                    else:
+                        print(f"❌ Ошибка обучения {display_name}: train_models вернул None (проверьте колонки в CSV).")
+                        continue
                 else:
+                    print(f"❌ Ошибка загрузки {display_name}: недостаточно данных ({len(df) if df is not None else 0} матчей).")
                     continue
             
+            # 3. Если модель успешно загружена или обучена, сохраняем в память
             df = load_matches_data(data_path)
             MODELS[folder] = {
                 'model_data': model_data,
                 'df': df,
-                'ratings': model_data.get('final_ratings', {}),
+                'ratings': model_data.get('final_ratings', {}), # Теперь model_data точно не None
                 'name': display_name
             }
             print(f"✅ Загружена модель: {display_name}")
+            
         except Exception as e:
             print(f"❌ Ошибка загрузки {folder}: {e}")
-
-@app.on_event("startup")
+            import traceback
+            traceback.print_exc() # Полезно для отладки, если что-то пойдёт не так
+            
 def startup():
     init_db()
     load_all_models()

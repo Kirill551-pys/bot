@@ -702,6 +702,85 @@ def calculate_rest_days(df: pd.DataFrame) -> pd.DataFrame:
     
     return df
 
+def calculate_team_statistics(df: pd.DataFrame, team_name: str, max_matches: int = 50, season_start_date: str = "2025-08-01") -> Dict:
+    """Расчёт расширенной статистики команды для рейтингов"""
+    if df is None or len(df) == 0 or not team_name:
+        return {}
+    
+    if 'date' in df.columns and season_start_date:
+        df_filtered = df[df['date'] >= pd.to_datetime(season_start_date)].copy()
+    else:
+        df_filtered = df.copy()
+        
+    team_matches = df_filtered[
+        (df_filtered['home_team'] == team_name) | (df_filtered['away_team'] == team_name)
+    ].sort_values('date', ascending=False).head(max_matches)
+    
+    if len(team_matches) == 0:
+        return {}
+    
+    stats = {'matches_played': len(team_matches)}
+    home_mask = team_matches['home_team'] == team_name
+    
+    goals_scored = np.where(home_mask, team_matches['home_goals'].values, team_matches['away_goals'].values)
+    goals_conceded = np.where(home_mask, team_matches['away_goals'].values, team_matches['home_goals'].values)
+    total_goals = goals_scored + goals_conceded
+    
+    stats['over_2_5_pct'] = float(np.mean(total_goals > 2.5) * 100)
+    stats['btts_yes_pct'] = float(np.mean((goals_scored > 0) & (goals_conceded > 0)) * 100)
+    
+    points = 0
+    for _, match in team_matches.iterrows():
+        if match['home_team'] == team_name:
+            if match['home_goals'] > match['away_goals']: points += 3
+            elif match['home_goals'] == match['away_goals']: points += 1
+        else:
+            if match['away_goals'] > match['home_goals']: points += 3
+            elif match['away_goals'] == match['home_goals']: points += 1
+    max_points = len(team_matches) * 3
+    stats['form_pct'] = float((points / max_points) * 100) if max_points > 0 else 0.0
+    
+    if 'home_corners' in team_matches.columns:
+        corners_for = np.where(home_mask, team_matches['home_corners'].values, team_matches['away_corners'].values)
+        total_corners = corners_for + np.where(home_mask, team_matches['away_corners'].values, team_matches['home_corners'].values)
+        stats['avg_corners_for'] = float(np.mean(corners_for))
+        stats['total_corners_avg'] = float(np.mean(total_corners))
+        stats['corners_over_10_5_pct'] = float(np.mean(total_corners > 10.5) * 100)
+    else:
+        stats['avg_corners_for'] = stats['total_corners_avg'] = stats['corners_over_10_5_pct'] = 0.0
+        
+    if 'home_yellows' in team_matches.columns:
+        yellows_for = np.where(home_mask, team_matches['home_yellows'].values, team_matches['away_yellows'].values)
+        total_yellows = yellows_for + np.where(home_mask, team_matches['away_yellows'].values, team_matches['home_yellows'].values)
+        stats['avg_yellows_for'] = float(np.mean(yellows_for))
+        stats['total_yellows_avg'] = float(np.mean(total_yellows))
+        stats['yellows_over_4_5_pct'] = float(np.mean(yellows_for > 4.5) * 100)
+    else:
+        stats['avg_yellows_for'] = stats['total_yellows_avg'] = stats['yellows_over_4_5_pct'] = 0.0
+
+    if 'home_shots' in team_matches.columns:
+        shots_for = np.where(home_mask, team_matches['home_shots'].values, team_matches['away_shots'].values)
+        shots_against = np.where(home_mask, team_matches['away_shots'].values, team_matches['home_shots'].values)
+        stats['total_shots_avg'] = float(np.mean(shots_for + shots_against))
+    else:
+        stats['total_shots_avg'] = 0.0
+        
+    if 'home_shots_on_target' in team_matches.columns:
+        sot_for = np.where(home_mask, team_matches['home_shots_on_target'].values, team_matches['away_shots_on_target'].values)
+        sot_against = np.where(home_mask, team_matches['away_shots_on_target'].values, team_matches['home_shots_on_target'].values)
+        stats['total_sot_avg'] = float(np.mean(sot_for + sot_against))
+    else:
+        stats['total_sot_avg'] = 0.0
+        
+    if 'home_fouls' in team_matches.columns:
+        fouls_for = np.where(home_mask, team_matches['home_fouls'].values, team_matches['away_fouls'].values)
+        fouls_against = np.where(home_mask, team_matches['away_fouls'].values, team_matches['home_fouls'].values)
+        stats['total_fouls_avg'] = float(np.mean(fouls_for + fouls_against))
+    else:
+        stats['total_fouls_avg'] = 0.0
+
+    return stats
+
 def get_league_rankings(df: pd.DataFrame, stat_type: str = 'corners', top_n: int = 3, season_start_date: str = "2025-08-01") -> list:
     if 'date' in df.columns and season_start_date:
         df = df[df['date'] >= pd.to_datetime(season_start_date)].copy()
