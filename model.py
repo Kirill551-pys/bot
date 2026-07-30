@@ -207,10 +207,11 @@ def calculate_elo_ratings_incremental(df: pd.DataFrame, k_factor: int = 32, init
         return df, {}
     
     all_teams = set(df['home_team'].dropna()) | set(df['away_team'].dropna())
-    ratings = {team: initial_rating for team in all_teams}
+    ratings = {team: float(initial_rating) for team in all_teams}
     df_sorted = df.sort_values('date').copy()
-    df_sorted['home_rating_pre'] = initial_rating
-    df_sorted['away_rating_pre'] = initial_rating
+    # 🔥 ИСПРАВЛЕНИЕ: Явно задаем тип float, чтобы избежать ошибки при записи дробных ELO
+    df_sorted['home_rating_pre'] = float(initial_rating)
+    df_sorted['away_rating_pre'] = float(initial_rating)
     
     def expected_score(rating_a, rating_b):
         return 1 / (1 + 10 ** ((rating_b - rating_a) / 400))

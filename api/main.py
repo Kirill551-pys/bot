@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -22,87 +23,119 @@ from database import (
 from config import LEAGUES, SUBSCRIPTION_PRICES, REFERRAL_FREE_DAYS
 from auth import verify_telegram_init_data
 
-app = FastAPI(title="Football Predictor API", version="2.0")
+# ==================== ЗАГРУЗКА МОДЕЛЕЙ ====================
+MODELS = {}
+DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
 
-@app.get("/")
-def root():
-    return {"status": "ok", "message": "Football Predictor API is running"}
+def load_all_models():
+    print("\n" + "="*80, flush=True)
+    print("🔍 НАЧАЛО ЗАГРУЗКИ МОДЕЛЕЙ", flush=True)
+    print(f"📂 Путь к данным: {DATA_DIR}", flush=True)
+    print(f"📂 Папка существует: {os.path.exists(DATA_DIR)}", flush=True)
+    if os.path.exists(DATA_DIR):
+        print(f"📂 Содержимое папки data: {os.listdir(DATA_DIR)}", flush=True)
+    print(f"⚙️ Список лиг из config (LEAGUES): {LEAGUES}", flush=True)
+    print("="*80 + "\n", flush=True)
 
+    if not LEAGUES:
+        print("❌ ОШИБКА: Словарь LEAGUES пуст! Проверьте файл config.py", flush=True)
+        return
+
+    for folder, display_name in LEAGUES.items():
+        try:
+            data_path = os.path.join(DATA_DIR, folder, 'matches.csv')
+            model_path = os.path.join(DATA_DIR, folder, 'model.pkl')
+            
+            print(f"➡️ Обрабатываю лигу: {display_name} ({folder})", flush=True)
+            print(f"   Файл CSV существует: {os.path.exists(data_path)}", flush=True)
+            
+            if not os.path.exists(data_path):
+                print(f"   ⚠️ Пропуск: файл {data_path} не найден!", flush=True)
+                continue
+            
+            model_data = None
+            if os.path.exists(model_path):
+                print(f"   📥 Пытаюсь загрузить модель...", flush=True)
+                model_data = load_model(model_path)
+            
+            if model_data is None:
+                print(f"   🔄 Модели нет или она устарела. Загружаю CSV для обучения...", flush=True)
+                df = load_matches_data(data_path)
+                
+                if df is not None and len(df) > 50:
+                    print(f"   🧠 Начинаю обучение (это может занять время)...", flush=True)
+                    model_data = train_models(df)
+                    if model_data is not None:
+                        save_model(model_data, model_path)
+                        print(f"   ✅ Модель успешно обучена и сохранена!", flush=True)
+                    else:
+                        print(f"   ❌ Ошибка: train_models вернула None. Проверьте колонки в CSV!", flush=True)
+                        continue
+                else:
+                    print(f"   ❌ Ошибка: данных недостаточно ({len(df) if df is not None else 0} матчей).", flush=True)
+                    continue
+            
+            # Финальная загрузка DataFrame для словаря MODELS
+            df = load_matches_data(data_path)
+            MODELS[folder] = {
+                'model_data': model_data,
+                'df': df,
+                'ratings': model_data.get('final_ratings', {}),
+                'name': display_name
+            }
+            print(f"   🎉 Успешно добавлено в память: {display_name}", flush=True)
+            
+        except Exception as e:
+            print(f"   💥 КРИТИЧЕСКАЯ ОШИБКА для {folder}: {e}", flush=True)
+            import traceback
+            traceback.print_exc()
+
+    print(f"\n✅ ЗАГРУЗКА ЗАВЕРШЕНА. Всего моделей в памяти: {len(MODELS)}", flush=True)
+    print("="*80 + "\n", flush=True)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # === ЭТО ВЫПОЛНЯЕТСЯ ПРИ ЗАПУСКЕ (STARTUP) ===
+    print("\n" + "="*80, flush=True)
+    print("🚀 ЗАПУСК ФУНКЦИИ LIFESPAN (STARTUP)", flush=True)
+    print(f"📁 Текущая рабочая директория: {os.getcwd()}", flush=True)
+    print("="*80 + "\n", flush=True)
+    
+    init_db()
+    print("🗄️ База данных инициализирована", flush=True)
+    
+    load_all_models()
+    
+    print("\n🎉 ВСЕ ПРОЦЕДУРЫ STARTUP ЗАВЕРШЕНЫ УСПЕШНО 🎉\n", flush=True)
+    
+    yield  # <-- Здесь приложение работает и принимает запросы
+    
+    # === ЭТО ВЫПОЛНЯЕТСЯ ПРИ ОСТАНОВКЕ (SHUTDOWN) ===
+    print("🛑 Завершение работы приложения...", flush=True)
+
+# ⚠️ ВАЖНО: Создаем приложение ЗДЕСЬ, до всех маршрутов (@app.get)
+app = FastAPI(title="Football Predictor API", version="2.0", lifespan=lifespan)
+
+# ==================== MIDDLEWARE ====================
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:5173",           # Для локальной разработки
-        "https://*.onrender.com",          # Для Render
-        "https://web.telegram.org",        # Для Telegram Web
-        "https://t.me",                    # Для Telegram
-        "*"                                # Временно для всех (потом уберём)
+        "http://localhost:5173",
+        "https://*.onrender.com",
+        "https://web.telegram.org",
+        "https://t.me",
+        "*"
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ==================== ЗАГРУЗКА МОДЕЛЕЙ ====================
-MODELS = {}
-DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
-
-def load_all_models():
-    import sys
-    print("="*60, flush=True)
-    print(f"🔍 ПРОВЕРКА ПУТЕЙ НА RENDER", flush=True)
-    print(f"📂 DATA_DIR существует: {os.path.exists(DATA_DIR)}", flush=True)
-    if os.path.exists(DATA_DIR):
-        print(f"📂 Содержимое DATA_DIR: {os.listdir(DATA_DIR)}", flush=True)
-    print("="*60, flush=True)
-    """Загружает все модели при старте"""
-    for folder, display_name in LEAGUES.items():
-        data_path = os.path.join(DATA_DIR, folder, 'matches.csv')
-        model_path = os.path.join(DATA_DIR, folder, 'model.pkl')
-        
-        if not os.path.exists(data_path):
-            continue
-        
-        try:
-            model_data = None
-            
-            # 1. Пытаемся загрузить существующую модель
-            if os.path.exists(model_path):
-                model_data = load_model(model_path)
-            
-            # 2. Если модели нет или она была удалена как старая (вернула None), обучаем новую
-            if model_data is None:
-                print(f"⚠️ Модель для {display_name} отсутствует или устарела. Начинаем обучение...")
-                df = load_matches_data(data_path)
-                
-                if df is not None and len(df) > 50:
-                    model_data = train_models(df)
-                    if model_data is not None:
-                        save_model(model_data, model_path)
-                    else:
-                        print(f"❌ Ошибка обучения {display_name}: train_models вернул None (проверьте колонки в CSV).")
-                        continue
-                else:
-                    print(f"❌ Ошибка загрузки {display_name}: недостаточно данных ({len(df) if df is not None else 0} матчей).")
-                    continue
-            
-            # 3. Если модель успешно загружена или обучена, сохраняем в память
-            df = load_matches_data(data_path)
-            MODELS[folder] = {
-                'model_data': model_data,
-                'df': df,
-                'ratings': model_data.get('final_ratings', {}), # Теперь model_data точно не None
-                'name': display_name
-            }
-            print(f"✅ Загружена модель: {display_name}")
-            
-        except Exception as e:
-            print(f"❌ Ошибка загрузки {folder}: {e}")
-            import traceback
-            traceback.print_exc() # Полезно для отладки, если что-то пойдёт не так
-
-def startup():
-    init_db()
-    load_all_models()
+# ==================== ENDPOINTS ====================
+@app.get("/")
+def root():
+    return {"status": "ok", "message": "Football Predictor API is running"}
 
 # ==================== АВТОРИЗАЦИЯ ====================
 def get_current_user(x_telegram_init_data: str = Header(None, alias="X-Telegram-Init-Data")) -> dict:
@@ -162,7 +195,6 @@ class TeamStatsResponse(BaseModel):
 # ==================== ENDPOINTS: ЛИГИ ====================
 @app.get("/api/leagues", response_model=List[LeagueResponse])
 def get_leagues(user: dict = Depends(get_current_user)):
-    """Список всех доступных лиг"""
     result = []
     for key, name in LEAGUES.items():
         if key in MODELS:
@@ -179,7 +211,6 @@ def get_leagues(user: dict = Depends(get_current_user)):
 
 @app.get("/api/leagues/{league}/teams", response_model=List[str])
 def get_teams(league: str, user: dict = Depends(get_current_user)):
-    """Список команд лиги"""
     if league not in MODELS:
         raise HTTPException(status_code=404, detail="League not found")
     
@@ -193,7 +224,6 @@ def get_teams(league: str, user: dict = Depends(get_current_user)):
 # ==================== ENDPOINTS: ПРОГНОЗЫ ====================
 @app.post("/api/predictions/match", response_model=PredictionResponse)
 def get_match_prediction(req: MatchRequest, user: dict = Depends(get_current_user)):
-    """Прогноз конкретного матча"""
     if req.league not in MODELS:
         raise HTTPException(status_code=404, detail="League not found")
     
@@ -214,7 +244,6 @@ def get_match_prediction(req: MatchRequest, user: dict = Depends(get_current_use
 
 @app.get("/api/predictions/hot")
 def get_hot_prediction(user: dict = Depends(get_current_user)):
-    """Горячий прогноз дня"""
     best_match, best_prob = None, 0
     
     for league_key, model_info in MODELS.items():
@@ -222,7 +251,6 @@ def get_hot_prediction(user: dict = Depends(get_current_user)):
         if df is None or len(df) < 10:
             continue
         
-        # Берём последние 5 матчей и ищем лучший
         for _, match in df.tail(5).iterrows():
             team1, team2 = match['home_team'], match['away_team']
             
@@ -255,7 +283,6 @@ def get_hot_prediction(user: dict = Depends(get_current_user)):
 # ==================== ENDPOINTS: СТАТИСТИКА ====================
 @app.get("/api/stats/{league}/{team}", response_model=TeamStatsResponse)
 def get_team_stats(league: str, team: str, user: dict = Depends(get_current_user)):
-    """Статистика команды"""
     if league not in MODELS:
         raise HTTPException(status_code=404, detail="League not found")
     
@@ -276,7 +303,6 @@ def get_top_teams(
     top_n: int = 3,
     user: dict = Depends(get_current_user)
 ):
-    """ТОП-3 команд по показателю"""
     if league not in MODELS:
         raise HTTPException(status_code=404, detail="League not found")
     
@@ -290,7 +316,6 @@ def get_top_teams(
 # ==================== ENDPOINTS: ПОЛЬЗОВАТЕЛЬ ====================
 @app.get("/api/user/subscription")
 def get_subscription(user: dict = Depends(get_current_user)):
-    """Информация о подписке"""
     user_id = user['id']
     create_user(user_id, user.get('username'), user.get('first_name'))
     
@@ -302,7 +327,6 @@ def get_subscription(user: dict = Depends(get_current_user)):
 
 @app.post("/api/user/trial")
 def activate_trial(user: dict = Depends(get_current_user)):
-    """Активировать пробный период"""
     user_id = user['id']
     
     if not is_trial_available(user_id):
@@ -315,7 +339,6 @@ def activate_trial(user: dict = Depends(get_current_user)):
 
 @app.get("/api/user/referrals")
 def get_referrals(user: dict = Depends(get_current_user)):
-    """Реферальная статистика"""
     user_id = user['id']
     ref_count = get_referral_count(user_id)
     bonus_days = ref_count * REFERRAL_FREE_DAYS
@@ -329,7 +352,5 @@ def get_referrals(user: dict = Depends(get_current_user)):
 # ==================== ЗАПУСК ====================
 if __name__ == "__main__":
     import uvicorn
-    import os
-    # Render передаёт порт через переменную окружения PORT
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
