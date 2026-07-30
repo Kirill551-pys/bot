@@ -724,3 +724,245 @@
 2026-07-12 18:00:10 | INFO | ✅ Файл прочитан (кодировка: utf-8)
 2026-07-12 18:00:14 | INFO | ✅ Дни отдыха рассчитаны
 2026-07-12 18:00:14 | INFO | ✅ Загружено 6034 матчей
+2026-07-30 15:51:00 | INFO | ✅ База данных инициализирована
+2026-07-30 15:51:00 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\rpl\model.pkl
+2026-07-30 15:51:00 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\rpl\matches.csv
+2026-07-30 15:51:00 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 15:51:03 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 15:51:03 | INFO | ✅ Загружено 3400 матчей
+2026-07-30 15:51:03 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\epl\model.pkl
+2026-07-30 15:51:03 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\epl\matches.csv
+2026-07-30 15:51:03 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 15:51:04 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 15:51:04 | INFO | ✅ Загружено 1520 матчей
+2026-07-30 15:51:05 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\bundesliga\model.pkl
+2026-07-30 15:51:05 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\bundesliga\matches.csv
+2026-07-30 15:51:05 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 15:51:06 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 15:51:06 | INFO | ✅ Загружено 1224 матчей
+2026-07-30 15:51:06 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\seriaA\model.pkl
+2026-07-30 15:51:06 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\seriaA\matches.csv
+2026-07-30 15:51:06 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 15:51:07 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 15:51:07 | INFO | ✅ Загружено 1520 матчей
+2026-07-30 15:51:07 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\laLiga\model.pkl
+2026-07-30 15:51:07 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\laLiga\matches.csv
+2026-07-30 15:51:07 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 15:51:08 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 15:51:08 | INFO | ✅ Загружено 1520 матчей
+2026-07-30 15:51:08 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\ligue1\model.pkl
+2026-07-30 15:51:08 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\ligue1\matches.csv
+2026-07-30 15:51:08 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 15:51:09 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 15:51:09 | INFO | ✅ Загружено 1446 матчей
+2026-07-30 15:51:09 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\champions_league\model.pkl
+2026-07-30 15:51:09 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\champions_league\matches.csv
+2026-07-30 15:51:09 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 15:51:09 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 15:51:09 | INFO | ✅ Загружено 135 матчей
+2026-07-30 15:51:09 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\eredivisise\model.pkl
+2026-07-30 15:51:09 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\eredivisise\matches.csv
+2026-07-30 15:51:09 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 15:51:10 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 15:51:10 | INFO | ✅ Загружено 1224 матчей
+2026-07-30 15:51:10 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\portugueseLiga\model.pkl
+2026-07-30 15:51:10 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\portugueseLiga\matches.csv
+2026-07-30 15:51:10 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 15:51:11 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 15:51:11 | INFO | ✅ Загружено 1224 матчей
+2026-07-30 15:51:11 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\argentina\model.pkl
+2026-07-30 15:51:11 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\argentina\matches.csv
+2026-07-30 15:51:11 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 15:51:15 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 15:51:15 | INFO | ✅ Загружено 6235 матчей
+2026-07-30 15:51:15 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\austria\model.pkl
+2026-07-30 15:51:15 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\austria\matches.csv
+2026-07-30 15:51:15 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 15:51:17 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 15:51:17 | INFO | ✅ Загружено 2638 матчей
+2026-07-30 15:51:17 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\brazil\model.pkl
+2026-07-30 15:51:17 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\brazil\matches.csv
+2026-07-30 15:51:17 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 15:51:20 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 15:51:20 | INFO | ✅ Загружено 5497 матчей
+2026-07-30 15:51:20 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\china\model.pkl
+2026-07-30 15:51:20 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\china\matches.csv
+2026-07-30 15:51:20 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 15:51:22 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 15:51:22 | INFO | ✅ Загружено 2944 матчей
+2026-07-30 15:51:22 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\dania\model.pkl
+2026-07-30 15:51:22 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\dania\matches.csv
+2026-07-30 15:51:22 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 15:51:24 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 15:51:24 | INFO | ✅ Загружено 2952 матчей
+2026-07-30 15:51:24 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\finland\model.pkl
+2026-07-30 15:51:24 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\finland\matches.csv
+2026-07-30 15:51:24 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 15:51:26 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 15:51:26 | INFO | ✅ Загружено 2630 матчей
+2026-07-30 15:51:26 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\greece\model.pkl
+2026-07-30 15:51:26 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\greece\matches.csv
+2026-07-30 15:51:26 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 15:51:27 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 15:51:27 | INFO | ✅ Загружено 1200 матчей
+2026-07-30 15:51:27 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\japan\model.pkl
+2026-07-30 15:51:27 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\japan\matches.csv
+2026-07-30 15:51:27 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 15:51:30 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 15:51:30 | INFO | ✅ Загружено 4523 матчей
+2026-07-30 15:51:30 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\mexico\model.pkl
+2026-07-30 15:51:30 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\mexico\matches.csv
+2026-07-30 15:51:30 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 15:51:33 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 15:51:33 | INFO | ✅ Загружено 4655 матчей
+2026-07-30 15:51:33 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\norway\model.pkl
+2026-07-30 15:51:33 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\norway\matches.csv
+2026-07-30 15:51:33 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 15:51:35 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 15:51:35 | INFO | ✅ Загружено 3471 матчей
+2026-07-30 15:51:35 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\poland\model.pkl
+2026-07-30 15:51:35 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\poland\matches.csv
+2026-07-30 15:51:35 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 15:51:38 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 15:51:38 | INFO | ✅ Загружено 4082 матчей
+2026-07-30 15:51:38 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\romania\model.pkl
+2026-07-30 15:51:38 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\romania\matches.csv
+2026-07-30 15:51:38 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 15:51:41 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 15:51:41 | INFO | ✅ Загружено 4182 матчей
+2026-07-30 15:51:41 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\scotland\model.pkl
+2026-07-30 15:51:41 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\scotland\matches.csv
+2026-07-30 15:51:41 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 15:51:42 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 15:51:42 | INFO | ✅ Загружено 1091 матчей
+2026-07-30 15:51:42 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\turkey\model.pkl
+2026-07-30 15:51:42 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\turkey\matches.csv
+2026-07-30 15:51:42 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 15:51:43 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 15:51:43 | INFO | ✅ Загружено 1828 матчей
+2026-07-30 15:51:43 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\usa\model.pkl
+2026-07-30 15:51:43 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\usa\matches.csv
+2026-07-30 15:51:43 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 15:51:47 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 15:51:47 | INFO | ✅ Загружено 6034 матчей
+2026-07-30 16:08:45 | INFO | ✅ База данных инициализирована
+2026-07-30 16:08:45 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\rpl\model.pkl
+2026-07-30 16:08:45 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\rpl\matches.csv
+2026-07-30 16:08:45 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 16:08:47 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 16:08:47 | INFO | ✅ Загружено 3400 матчей
+2026-07-30 16:08:47 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\epl\model.pkl
+2026-07-30 16:08:47 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\epl\matches.csv
+2026-07-30 16:08:47 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 16:08:48 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 16:08:48 | INFO | ✅ Загружено 1520 матчей
+2026-07-30 16:08:48 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\bundesliga\model.pkl
+2026-07-30 16:08:48 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\bundesliga\matches.csv
+2026-07-30 16:08:49 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 16:08:49 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 16:08:49 | INFO | ✅ Загружено 1224 матчей
+2026-07-30 16:08:49 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\seriaA\model.pkl
+2026-07-30 16:08:49 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\seriaA\matches.csv
+2026-07-30 16:08:49 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 16:08:50 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 16:08:50 | INFO | ✅ Загружено 1520 матчей
+2026-07-30 16:08:50 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\laLiga\model.pkl
+2026-07-30 16:08:50 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\laLiga\matches.csv
+2026-07-30 16:08:50 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 16:08:51 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 16:08:51 | INFO | ✅ Загружено 1520 матчей
+2026-07-30 16:08:51 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\ligue1\model.pkl
+2026-07-30 16:08:51 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\ligue1\matches.csv
+2026-07-30 16:08:51 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 16:08:52 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 16:08:52 | INFO | ✅ Загружено 1446 матчей
+2026-07-30 16:08:52 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\champions_league\model.pkl
+2026-07-30 16:08:52 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\champions_league\matches.csv
+2026-07-30 16:08:52 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 16:08:53 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 16:08:53 | INFO | ✅ Загружено 135 матчей
+2026-07-30 16:08:53 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\eredivisise\model.pkl
+2026-07-30 16:08:53 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\eredivisise\matches.csv
+2026-07-30 16:08:53 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 16:08:53 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 16:08:53 | INFO | ✅ Загружено 1224 матчей
+2026-07-30 16:08:54 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\portugueseLiga\model.pkl
+2026-07-30 16:08:54 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\portugueseLiga\matches.csv
+2026-07-30 16:08:54 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 16:08:54 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 16:08:54 | INFO | ✅ Загружено 1224 матчей
+2026-07-30 16:08:54 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\argentina\model.pkl
+2026-07-30 16:08:54 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\argentina\matches.csv
+2026-07-30 16:08:54 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 16:08:58 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 16:08:58 | INFO | ✅ Загружено 6235 матчей
+2026-07-30 16:08:58 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\austria\model.pkl
+2026-07-30 16:08:58 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\austria\matches.csv
+2026-07-30 16:08:58 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 16:08:59 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 16:08:59 | INFO | ✅ Загружено 2638 матчей
+2026-07-30 16:09:00 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\brazil\model.pkl
+2026-07-30 16:09:00 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\brazil\matches.csv
+2026-07-30 16:09:00 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 16:09:03 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 16:09:03 | INFO | ✅ Загружено 5497 матчей
+2026-07-30 16:09:03 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\china\model.pkl
+2026-07-30 16:09:03 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\china\matches.csv
+2026-07-30 16:09:03 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 16:09:05 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 16:09:05 | INFO | ✅ Загружено 2944 матчей
+2026-07-30 16:09:05 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\dania\model.pkl
+2026-07-30 16:09:05 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\dania\matches.csv
+2026-07-30 16:09:05 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 16:09:07 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 16:09:07 | INFO | ✅ Загружено 2952 матчей
+2026-07-30 16:09:07 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\finland\model.pkl
+2026-07-30 16:09:07 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\finland\matches.csv
+2026-07-30 16:09:07 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 16:09:09 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 16:09:09 | INFO | ✅ Загружено 2630 матчей
+2026-07-30 16:09:09 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\greece\model.pkl
+2026-07-30 16:09:09 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\greece\matches.csv
+2026-07-30 16:09:09 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 16:09:10 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 16:09:10 | INFO | ✅ Загружено 1200 матчей
+2026-07-30 16:09:10 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\japan\model.pkl
+2026-07-30 16:09:10 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\japan\matches.csv
+2026-07-30 16:09:10 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 16:09:13 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 16:09:13 | INFO | ✅ Загружено 4523 матчей
+2026-07-30 16:09:13 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\mexico\model.pkl
+2026-07-30 16:09:13 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\mexico\matches.csv
+2026-07-30 16:09:13 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 16:09:16 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 16:09:16 | INFO | ✅ Загружено 4655 матчей
+2026-07-30 16:09:16 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\norway\model.pkl
+2026-07-30 16:09:16 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\norway\matches.csv
+2026-07-30 16:09:16 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 16:09:18 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 16:09:18 | INFO | ✅ Загружено 3471 матчей
+2026-07-30 16:09:18 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\poland\model.pkl
+2026-07-30 16:09:18 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\poland\matches.csv
+2026-07-30 16:09:18 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 16:09:20 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 16:09:20 | INFO | ✅ Загружено 4082 матчей
+2026-07-30 16:09:20 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\romania\model.pkl
+2026-07-30 16:09:20 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\romania\matches.csv
+2026-07-30 16:09:20 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 16:09:23 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 16:09:23 | INFO | ✅ Загружено 4182 матчей
+2026-07-30 16:09:23 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\scotland\model.pkl
+2026-07-30 16:09:23 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\scotland\matches.csv
+2026-07-30 16:09:23 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 16:09:24 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 16:09:24 | INFO | ✅ Загружено 1091 матчей
+2026-07-30 16:09:24 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\turkey\model.pkl
+2026-07-30 16:09:24 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\turkey\matches.csv
+2026-07-30 16:09:24 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 16:09:25 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 16:09:25 | INFO | ✅ Загружено 1828 матчей
+2026-07-30 16:09:25 | INFO | ✅ Модель загружена: C:\Users\taran\Training_Main_bot\data\usa\model.pkl
+2026-07-30 16:09:25 | INFO | 📥 Загрузка данных из C:\Users\taran\Training_Main_bot\data\usa\matches.csv
+2026-07-30 16:09:25 | INFO | ✅ Файл прочитан (кодировка: utf-8)
+2026-07-30 16:09:28 | INFO | ✅ Дни отдыха рассчитаны
+2026-07-30 16:09:28 | INFO | ✅ Загружено 6034 матчей

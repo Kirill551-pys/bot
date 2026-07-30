@@ -27,9 +27,11 @@ app = FastAPI(title="Football Predictor API", version="2.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:5173",  # Vite dev server
-        "http://127.0.0.1:5173",
-        "https://your-domain.com"  # Добавьте позже
+        "http://localhost:5173",           # Для локальной разработки
+        "https://*.onrender.com",          # Для Render
+        "https://web.telegram.org",        # Для Telegram Web
+        "https://t.me",                    # Для Telegram
+        "*"                                # Временно для всех (потом уберём)
     ],
     allow_credentials=True,
     allow_methods=["*"],
