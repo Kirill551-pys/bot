@@ -155,6 +155,28 @@ export function Prediction() {
             <p className="text-sm text-tg-hint">🛡️ Доверие к прогнозу:</p>
             <p className="font-semibold">{prediction.trust_signal}</p>
           </div>
+          
+          {/* Угловые */}
+          {prediction.corners && (
+            <div className="card space-y-2">
+              <h3 className="font-semibold">🎯 Угловые:</h3>
+              <ProbabilityBar label="ТБ 9.5" value={prediction.corners['Over 9.5']} />
+              <ProbabilityBar label="ТМ 9.5" value={prediction.corners['Under 9.5']} />
+              <ProbabilityBar label="ТБ 10.5" value={prediction.corners['Over 10.5']} />
+              <ProbabilityBar label="ТМ 10.5" value={prediction.corners['Under 10.5']} />
+            </div>
+          )}
+
+          {/* Карточки */}
+          {prediction.cards && (
+            <div className="card space-y-2">
+              <h3 className="font-semibold"> Карточки:</h3>
+              <ProbabilityBar label="ТБ 3.5" value={prediction.cards['Over 3.5']} />
+              <ProbabilityBar label="ТМ 3.5" value={prediction.cards['Under 3.5']} />
+              <ProbabilityBar label="ТБ 4.5" value={prediction.cards['Over 4.5']} />
+              <ProbabilityBar label="ТМ 4.5" value={prediction.cards['Under 4.5']} />
+            </div>
+          )}
         </div>
       )}
     </div>

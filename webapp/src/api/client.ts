@@ -29,6 +29,18 @@ export interface Prediction {
     'Yes': number;
     'No': number;
   };
+  corners?: {
+    'Over 9.5': number;
+    'Under 9.5': number;
+    'Over 10.5': number;
+    'Under 10.5': number;
+  };
+  cards?: {
+    'Over 3.5': number;
+    'Under 3.5': number;
+    'Over 4.5': number;
+    'Under 4.5': number;
+  };
   recommendation: string;
   trust_signal: string;
   is_hot: boolean;

@@ -98,6 +98,8 @@ class PredictionResponse(BaseModel):
     result: dict
     total_goals: Optional[dict] = None
     both_scored: Optional[dict] = None
+    corners: Optional[dict] = None  
+    cards: Optional[dict] = None 
     recommendation: Optional[str] = None
     trust_signal: Optional[str] = None
     is_hot: bool = False
