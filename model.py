@@ -535,16 +535,42 @@ def predict_match(team1: str, team2: str, model_data: dict, ratings_dict: dict =
         logger.error(f"❌ Ошибка в predict_match: {e}")
         return {"error": f"Внутренняя ошибка: {str(e)[:100]}"}
 
+# ==================== СОХРАНЕНИЕ/ЗАГРУЗКА (АГРЕССИВНАЯ ВЕРСИЯ) ====================
+
 def save_model(model_data: dict, filepath: str) -> bool:
     try:
+        # 🔥 ПРИНУДИТЕЛЬНО устанавливаем версию 2.2
+        model_data['version'] = '2.2'
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         joblib.dump(model_data, filepath)
-        logger.info(f"✅ Модель сохранена: {filepath}")
+        logger.info(f"✅ Модель сохранена: {filepath} (v2.2)")
         return True
     except Exception as e:
         logger.error(f"❌ Ошибка сохранения: {e}")
         return False
 
+def load_model(filepath: str) -> Optional[dict]:
+    if not os.path.exists(filepath): 
+        return None
+    try:
+        model_data = joblib.load(filepath)
+        
+        # 🔥 АГРЕССИВНАЯ ПРОВЕРКА: Если это НЕ версия 2.2, мы БЕЗЖАЛОСТНО удаляем файл!
+        if model_data.get('version') != '2.2':
+            logger.warning(f"⚠️ НАЙДЕНА СТАРАЯ МОДЕЛЬ (v{model_data.get('version')})! Удаляем {filepath} для переобучения...")
+            os.remove(filepath)
+            return None
+            
+        logger.info(f"✅ Модель загружена: {filepath} (v2.2)")
+        return model_data
+    except Exception as e:
+        logger.error(f"❌ Ошибка загрузки {filepath}: {e}. Удаляем битый файл.")
+        try:
+            os.remove(filepath)
+        except:
+            pass
+        return None
+    
 # ==================== ЗАГРУЗКА ДАННЫХ ====================
 def safe_convert_goals(col):
     """Безопасная конвертация голов в числа"""
