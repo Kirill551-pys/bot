@@ -546,11 +546,27 @@ def save_model(model_data: dict, filepath: str) -> bool:
         return False
 
 def load_model(filepath: str) -> Optional[dict]:
-    if not os.path.exists(filepath): return None
+    if not os.path.exists(filepath): 
+        return None
     try:
-        return joblib.load(filepath)
+        model_data = joblib.load(filepath)
+        
+        # 🔥 КРИТИЧЕСКАЯ ПРОВЕРКА ВЕРСИИ
+        # Если модель была обучена на 20 фичах (старая версия), мы её удаляем и заставляем переобучиться
+        if model_data.get('version') != '2.2':
+            logger.warning(f"⚠️ Найдена устаревшая модель {filepath} (v{model_data.get('version')}). Удаляем для переобучения...")
+            os.remove(filepath)
+            return None
+            
+        logger.info(f"✅ Модель загружена: {filepath}")
+        return model_data
     except Exception as e:
         logger.error(f"❌ Ошибка загрузки: {e}")
+        # Если файл битый, тоже удаляем его, чтобы не мешал
+        try:
+            os.remove(filepath)
+        except:
+            pass
         return None
 
 # ==================== СТАТИСТИКА ДЛЯ UI ====================
