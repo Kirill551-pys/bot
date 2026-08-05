@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useTelegram } from './hooks/useTelegram';
 import { setupAuth } from './api/client';
@@ -67,16 +67,16 @@ function BottomNav() {
       {navItems.map((item) => {
         const isActive = location.pathname === item.path;
         return (
-          <a
+          <Link
             key={item.path}
-            href={item.path}
+            to={item.path}
             className={`flex flex-col items-center px-3 py-1 transition-all ${
               isActive ? 'text-tg-button scale-110' : 'text-tg-hint'
             }`}
           >
             <span className="text-2xl">{item.icon}</span>
             <span className="text-xs mt-1 font-semibold">{item.label}</span>
-          </a>
+          </Link>
         );
       })}
     </nav>

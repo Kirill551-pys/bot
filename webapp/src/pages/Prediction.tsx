@@ -136,20 +136,23 @@ export function Prediction() {
           </Section>
 
           {/* 1-й тайм */}
-          {prediction.first_half_result && prediction.btts_first_half && (
+          {(prediction.first_half_result || prediction.btts_first_half) && (
             <Section title="⏱️ 1-й тайм">
-              <SubSection title="Исход">
-                <ProbabilityBar label={`${prediction.home_team} (П1)`} value={prediction.first_half_result['Home Win']} />
-                <ProbabilityBar label="Ничья" value={prediction.first_half_result['Draw']} />
-                <ProbabilityBar label={`${prediction.away_team} (П2)`} value={prediction.first_half_result['Away Win']} />
-              </SubSection>
-              <SubSection title="Обе забьют в 1-м тайме">
-                <ProbabilityBar label="Да" value={prediction.btts_first_half['Yes']} />
-                <ProbabilityBar label="Нет" value={prediction.btts_first_half['No']} />
-              </SubSection>
-            </Section>
+              {prediction.first_half_result && (
+                <SubSection title="Исход">
+                  <ProbabilityBar label={`${prediction.home_team} (П1)`} value={prediction.first_half_result['Home Win']} />
+                  <ProbabilityBar label="Ничья" value={prediction.first_half_result['Draw']} />
+                  <ProbabilityBar label={`${prediction.away_team} (П2)`} value={prediction.first_half_result['Away Win']} />
+                </SubSection>
           )}
-
+          {prediction.btts_first_half && (
+            <SubSection title="Обе забьют в 1-м тайме">
+              <ProbabilityBar label="Да" value={prediction.btts_first_half['Yes']} />
+              <ProbabilityBar label="Нет" value={prediction.btts_first_half['No']} />
+            </SubSection> 
+          )}
+          </Section>
+          )}    
           {/* Статистика матча (Сетка для компактности) */}
           {(prediction.total_shots || prediction.total_shots_on_target || prediction.total_fouls) && (
             <Section title="📊 Статистика матча">
