@@ -71,6 +71,28 @@ def validate_training_data(df: pd.DataFrame) -> tuple:
         return False, issues
     
     return len([i for i in issues if i.startswith('❌')]) == 0, issues
+
+
+def assign_football_season(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Определяет футбольный сезон на основе даты.
+    Например: Август 2025 -> Май 2026 = сезон '25/26'
+    """
+    if 'date' not in df.columns or df.empty:
+        return df
+        
+    year = df['date'].dt.year
+    month = df['date'].dt.month
+    
+    # Если месяц >= 8 (август), сезон начался в этом году.
+    # Если месяц < 8 (январь-июль), сезон начался в прошлом году.
+    season_start_year = np.where(month >= 8, year, year - 1)
+    season_end_year = season_start_year + 1
+    
+    # Создаем строку формата "2025-2026"
+    df['season'] = season_start_year.astype(str) + '-' + season_end_year.astype(str)
+    return df
+
 # ==================== ЗАГРУЗКА ДАННЫХ ====================
 def load_matches_data(data_path: str) -> Optional[pd.DataFrame]:
     logger.info(f"📥 Загрузка данных из {data_path}")
@@ -154,8 +176,8 @@ def load_matches_data(data_path: str) -> Optional[pd.DataFrame]:
     df['away_goals'] = safe_convert_goals(df.get('away_goals', 0))
     df = df[(df['home_goals'] <= 15) & (df['away_goals'] <= 15)]
     
-    df = calculate_rest_days(df)
-    logger.info(f"✅ Загружено {len(df)} матчей")
+    df = assign_football_season(df)
+    logger.info(f"✅ Загружено {len(df)} матчей. Доступные сезоны: {df['season'].unique().tolist()}")
     return df
 
 
@@ -668,7 +690,8 @@ def load_matches_data(data_path: str) -> Optional[pd.DataFrame]:
         df['home_rest_days'] = 7
         df['away_rest_days'] = 7
     
-    logger.info(f"✅ Загружено {len(df)} матчей")
+    df = assign_football_season(df)
+    logger.info(f"✅ Загружено {len(df)} матчей. Сезоны: {df['season'].unique().tolist()}")
     return df
 
 
@@ -850,3 +873,4 @@ def get_league_rankings(df: pd.DataFrame, stat_type: str = 'corners', top_n: int
     
     rankings.sort(key=lambda x: x['value'], reverse=True)
     return rankings[:top_n]
+

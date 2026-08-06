@@ -6,6 +6,7 @@ from typing import List, Optional
 import sys
 import os
 
+
 # Добавляем корневую папку в путь (для импорта model.py, database.py)
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
@@ -313,6 +314,8 @@ def get_team_stats(league: str, team: str, user: dict = Depends(get_current_user
         raise HTTPException(status_code=404, detail=f"Team '{team}' not found in {league}")
     return TeamStatsResponse(**stats)
 
+@app.get("/api/leagues/{league}/seasons", response_model=List[str])
+
 # ==================== ENDPOINTS: ПОЛЬЗОВАТЕЛЬ ====================
 @app.get("/api/user/subscription")
 def get_subscription(user: dict = Depends(get_current_user)):
@@ -336,6 +339,7 @@ def activate_trial(user: dict = Depends(get_current_user)):
     use_trial(user_id)
     
     return {'success': True, 'message': 'Trial activated for 3 days'}
+    
 
 @app.get("/api/user/referrals")
 def get_referrals(user: dict = Depends(get_current_user)):
