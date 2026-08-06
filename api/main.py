@@ -281,21 +281,7 @@ def get_hot_prediction(user: dict = Depends(get_current_user)):
     return best_match
 
 # ==================== ENDPOINTS: СТАТИСТИКА ====================
-@app.get("/api/stats/{league}/{team}", response_model=TeamStatsResponse)
-def get_team_stats(league: str, team: str, user: dict = Depends(get_current_user)):
-    if league not in MODELS:
-        raise HTTPException(status_code=404, detail="League not found")
-    
-    df = MODELS[league].get('df')
-    if df is None:
-        raise HTTPException(status_code=404, detail="No data")
-    
-    stats = calculate_team_statistics(df, team, season_start_date="2025-08-01")
-    if not stats:
-        raise HTTPException(status_code=404, detail="Team not found")
-    
-    return TeamStatsResponse(**stats)
-
+# 🚨 ВАЖНО: Статический путь /top ОБЯЗАН быть объявлен ПЕРВЫМ!
 @app.get("/api/stats/{league}/top")
 def get_top_teams(
     league: str,
@@ -305,13 +291,27 @@ def get_top_teams(
 ):
     if league not in MODELS:
         raise HTTPException(status_code=404, detail="League not found")
-    
     df = MODELS[league].get('df')
     if df is None:
         return []
-    
-    rankings = get_league_rankings(df, stat_type, top_n=top_n, season_start_date="2025-08-01")
+    # Передаем None вместо жесткой даты 2025-08-01
+    rankings = get_league_rankings(df, stat_type, top_n=top_n, season_start_date=None)
     return rankings
+
+@app.get("/api/stats/{league}/{team}", response_model=TeamStatsResponse)
+def get_team_stats(league: str, team: str, user: dict = Depends(get_current_user)):
+    if league not in MODELS:
+        raise HTTPException(status_code=404, detail="League not found")
+    df = MODELS[league].get('df')
+    if df is None:
+        raise HTTPException(status_code=404, detail="No data")
+    
+    # Передаем None вместо жесткой даты
+    stats = calculate_team_statistics(df, team, season_start_date=None)
+    
+    if not stats:
+        raise HTTPException(status_code=404, detail=f"Team '{team}' not found in {league}")
+    return TeamStatsResponse(**stats)
 
 # ==================== ENDPOINTS: ПОЛЬЗОВАТЕЛЬ ====================
 @app.get("/api/user/subscription")

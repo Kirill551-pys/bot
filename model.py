@@ -703,23 +703,37 @@ def calculate_rest_days(df: pd.DataFrame) -> pd.DataFrame:
     
     return df
 
-def calculate_team_statistics(df: pd.DataFrame, team_name: str, max_matches: int = 50, season_start_date: str = "2025-08-01") -> Dict:
+def calculate_team_statistics(df: pd.DataFrame, team_name: str, max_matches: int = 50, season_start_date: Optional[str] = None) -> Dict:
     """Расчёт статистики команды. Гарантирует возврат всех полей для TeamStatsResponse."""
     if df is None or len(df) == 0 or not team_name:
         return {}
     
+    df_filtered = df.copy()
     if 'date' in df.columns and season_start_date:
-        df_filtered = df[df['date'] >= pd.to_datetime(season_start_date, dayfirst=True, errors='coerce')].copy()
-    else:
-        df_filtered = df.copy()
-        
+        try:
+            start_dt = pd.to_datetime(season_start_date, dayfirst=True, errors='coerce')
+            temp_filtered = df[df['date'] >= start_dt].copy()
+            # 🛡️ Защита: Если после фильтрации осталось мало матчей (сезон еще не начался),
+            # используем все доступные данные, чтобы не отдавать 404.
+            if len(temp_filtered) >= 10: 
+                df_filtered = temp_filtered
+        except Exception:
+            pass
+
+    # Ищем матчи команды
     team_matches = df_filtered[
         (df_filtered['home_team'] == team_name) | (df_filtered['away_team'] == team_name)
     ].sort_values('date', ascending=False).head(max_matches)
     
+    # 🛡️ Fallback: Если в отфильтрованном df команду не нашли, ищем во всем df
+    if len(team_matches) == 0:
+        team_matches = df[
+            (df['home_team'] == team_name) | (df['away_team'] == team_name)
+        ].sort_values('date', ascending=False).head(max_matches)
+
     if len(team_matches) == 0:
         return {}
-    
+            
     stats = {
         'matches_played': int(len(team_matches)),
         'home_matches': int((team_matches['home_team'] == team_name).sum()),
@@ -796,16 +810,24 @@ def calculate_team_statistics(df: pd.DataFrame, team_name: str, max_matches: int
     return stats
 
 def get_league_rankings(df: pd.DataFrame, stat_type: str = 'corners', top_n: int = 3, season_start_date: str = "2025-08-01") -> list:
+    df_filtered = df.copy()
     if 'date' in df.columns and season_start_date:
-        df = df[df['date'] >= pd.to_datetime(season_start_date)].copy()
-    if df is None or len(df) == 0: return []
+        try:
+            start_dt = pd.to_datetime(season_start_date, dayfirst=True, errors='coerce')
+            temp_filtered = df[df['date'] >= start_dt].copy()
+            if len(temp_filtered) >= 10:
+                df_filtered = temp_filtered
+        except Exception:
+            pass
+
+    if df_filtered is None or len(df_filtered) == 0: return []
     
-    teams = list(set(df['home_team'].dropna()) | set(df['away_team'].dropna()))
+    teams = list(set(df_filtered['home_team'].dropna()) | set(df_filtered['away_team'].dropna()))
     rankings = []
-    
     for team in teams:
-        stats = calculate_team_statistics(df, team, max_matches=50, season_start_date=season_start_date)
-        if not stats or stats.get('matches_played', 0) < 5: continue
+        stats = calculate_team_statistics(df_filtered, team, max_matches=50, season_start_date=None)
+        if not stats or stats.get('matches_played', 0) < 3: # Уменьшили порог с 5 до 3 для надежности
+            continue
         
         val_map = {
             'corners': (stats.get('avg_corners_for', 0), f"{stats.get('avg_corners_for', 0):.1f} угл./матч"),
