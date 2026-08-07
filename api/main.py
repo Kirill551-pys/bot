@@ -314,6 +314,7 @@ def get_team_stats(league: str, team: str, user: dict = Depends(get_current_user
         raise HTTPException(status_code=404, detail=f"Team '{team}' not found in {league}")
     return TeamStatsResponse(**stats)
 
+@app.get("/api/leagues/{league}/seasons", response_model=List[str])
 
 # ==================== ENDPOINTS: ПОЛЬЗОВАТЕЛЬ ====================
 @app.get("/api/user/subscription")
