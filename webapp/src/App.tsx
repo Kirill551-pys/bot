@@ -103,7 +103,7 @@ function App() {
         <BrowserRouter>
           <ScrollToTop />
           {/* ✅ ИЗМЕНЕНИЕ 2: pb-28 — запас под меню + safe-area */}
-          <div className="min-h-screen bg-[#0f1923] pb-28">
+          <div className="min-h-screen bg-[#0f1923] pb-28 safe-top">
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/prediction" element={<Prediction />} />

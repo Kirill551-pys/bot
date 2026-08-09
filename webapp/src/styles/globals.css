@@ -324,3 +324,52 @@ select option {
 .nav-icon { font-size: 22px; }
 .nav-label { font-size: 10px; font-weight: 700; color: var(--tg-hint); }
 .nav-item.active .nav-label { color: var(--tg-button); }
+
+
+/* ============================================
+   📱 МОБИЛЬНАЯ АДАПТАЦИЯ
+   ============================================ */
+
+/* Не менять размер шрифта при повороте экрана */
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Честная высота экрана (100vh на iOS скачет из-за адресной строки) */
+.min-h-screen {
+  min-height: 100dvh !important;
+}
+
+/* Убираем pull-to-refresh и «резинку» — в мини-аппе они мешают */
+body {
+  overscroll-behavior-y: none;
+  touch-action: manipulation; /* отключает зум двойным тапом */
+}
+
+/* Запрет выделения текста на элементах управления */
+button, a, select, .nav-item, .tab-btn, .swap-btn {
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* 🔥 ВАЖНО: шрифт полей ≥16px, иначе iOS делает ЗУМ при фокусе */
+select, .select-modern, .search-input, input[type="text"] {
+  font-size: 16px;
+}
+
+/* Комфортные зоны нажатия (рекомендация Apple — от 44px) */
+.btn-primary { min-height: 48px; }
+.nav-item    { min-width: 60px; min-height: 48px; justify-content: center; }
+.tab-btn     { min-height: 36px; }
+
+/* Плавный горизонтальный скролл без полосы прокрутки */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
+}
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Отступ под «чёлку» iPhone для контента */
+.safe-top { padding-top: env(safe-area-inset-top); }
