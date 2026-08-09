@@ -1,3 +1,5 @@
+import { Component, useEffect } from 'react';
+import type { ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useTelegram } from './hooks/useTelegram';
@@ -8,26 +10,80 @@ import { Stats } from './pages/Stats';
 import { Subscribe } from './pages/Subscribe';
 import './styles/globals.css';
 
+/* ============================================
+   НАСТРОЙКА КЕШИРОВАНИЯ ЗАПРОСОВ
+   ============================================ */
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 1,
-      staleTime: 30000,
-      refetchOnWindowFocus: false,
+      retry: 1,                      // только 1 повтор при ошибке
+      staleTime: 30000,              // данные свежие 30 сек
+      refetchOnWindowFocus: false,   // не дёргать API лишний раз в Telegram
     }
   }
 });
 
+/* ============================================
+   ЗАЩИТА ОТ «БЕЛОГО ЭКРАНА» ПРИ ОШИБКАХ
+   ============================================ */
+class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-[#0f1923] px-6">
+          <div className="text-center animate-scale-in">
+            <div className="text-5xl mb-4">😵</div>
+            <h1 className="text-white text-lg font-extrabold mb-2">Что-то пошло не так</h1>
+            <p className="text-[#8b9baa] text-sm mb-5">Попробуйте перезапустить приложение</p>
+            <button className="btn-primary" onClick={() => window.location.reload()}>
+              🔄 Перезагрузить
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+/* ============================================
+   СКРОЛЛ ВВЕРХ ПРИ СМЕНЕ СТРАНИЦЫ
+   ============================================ */
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+}
+
+/* ============================================
+   ГЛАВНЫЙ КОМПОНЕНТ
+   ============================================ */
 function App() {
   const { initData, isReady } = useTelegram();
 
-  if (initData) setupAuth(initData);
+  // ✅ ИЗМЕНЕНИЕ 1: побочный эффект вынесен в useEffect
+  useEffect(() => {
+    if (initData) setupAuth(initData);
+  }, [initData]);
 
+  // Сплэш-экран, пока Telegram не готов
   if (!isReady) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0f1923]">
         <div className="text-center animate-scale-in">
-          {/* Анимированный логотип */}
           <div className="relative w-20 h-20 mx-auto mb-5">
             <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-blue-500 to-orange-500 animate-float opacity-80" />
             <div className="absolute inset-0 flex items-center justify-center text-3xl">⚽</div>
@@ -42,23 +98,30 @@ function App() {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <div className="min-h-screen bg-[#0f1923] pb-24">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/prediction" element={<Prediction />} />
-            <Route path="/stats" element={<Stats />} />
-            <Route path="/subscribe" element={<Subscribe />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-          <BottomNav />
-        </div>
-      </BrowserRouter>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <ScrollToTop />
+          {/* ✅ ИЗМЕНЕНИЕ 2: pb-28 — запас под меню + safe-area */}
+          <div className="min-h-screen bg-[#0f1923] pb-28">
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/prediction" element={<Prediction />} />
+              <Route path="/stats" element={<Stats />} />
+              <Route path="/subscribe" element={<Subscribe />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+            <BottomNav />
+          </div>
+        </BrowserRouter>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 
+/* ============================================
+   НИЖНЯЯ НАВИГАЦИЯ
+   ============================================ */
 function BottomNav() {
   const location = useLocation();
 
@@ -70,18 +133,18 @@ function BottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50"
-      style={{
-        background: 'rgba(26, 39, 51, 0.85)',
-        backdropFilter: 'blur(16px)',
-        borderTop: '1px solid rgba(255,255,255,0.06)'
-      }}
-    >
+    /* ✅ ИЗМЕНЕНИЕ 3: класс bottom-nav из globals.css —
+       там уже есть blur и env(safe-area-inset-bottom) */
+    <nav className="bottom-nav">
       <div className="flex justify-around py-2 px-3 max-w-lg mx-auto">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
           return (
-            <Link key={item.path} to={item.path} className={`nav-item ${isActive ? 'active' : ''}`}>
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`nav-item ${isActive ? 'active' : ''}`}
+            >
               <span className="nav-icon">{item.icon}</span>
               <span className="nav-label">{item.label}</span>
             </Link>
