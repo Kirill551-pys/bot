@@ -1,8 +1,4 @@
-/* Минимальный сброс. Все стили — в styles/globals.css */
-html, body, #root {
-  height: 100%;
-}
-
-body {
-  margin: 0;
-}
+/* Минимальный сброс. ВЕСЬ дизайн — в styles/globals.css */
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body { margin: 0; }
