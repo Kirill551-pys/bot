@@ -55,7 +55,7 @@ export function Prediction() {
       {/* ===== 1. ВЫБОР ЛИГИ ===== */}
       <div className="card space-y-4 animate-fade-up delay-1">
         <div>
-          <label className="block text-[13px] font-bold mb-2 text-[#8b9baa] uppercase tracking-wide">
+          <label className="block text-[12px] sm:text-[13px] font-bold mb-2 text-[#8b9baa] sm:uppercase sm:tracking-wide">
             🏆 Лига
           </label>
           <select
@@ -92,7 +92,7 @@ export function Prediction() {
               />
             </div>
 
-            {/* 🔥 АДАПТИВНАЯ СЕТКА:
+            {/* АДАПТИВНАЯ СЕТКА:
                 На мобильных — вертикальный стек
                 На десктопе (md+) — grid с кнопкой посередине */}
             <div className="flex flex-col gap-3 md:grid md:grid-cols-[1fr_auto_1fr] md:gap-2 md:items-end">
@@ -114,7 +114,7 @@ export function Prediction() {
                 </select>
               </div>
 
-              {/* КНОПКА СВОПА — на мобильных по центру, на десктопе между селектами */}
+              {/* КНОПКА СВОПА */}
               <button
                 onClick={swapTeams}
                 className="swap-btn self-center md:self-auto md:mb-1"
