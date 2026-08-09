@@ -1,6 +1,17 @@
-/* ============================================
-   ГЛОБАЛЬНЫЕ СТИЛИ TELEGRAM WEB APP
-   ============================================ */
+/* 🔥 ПОДКЛЮЧАЕМ TAILWIND — ОБЯЗАТЕЛЬНО ПЕРВОЙ СТРОКОЙ! */
+@import "tailwindcss";
+
+/* 🔥 Регистрируем цвета Telegram в Tailwind,
+   чтобы работали классы bg-tg-*, text-tg-*, border-tg-* */
+@theme inline {
+  --color-tg-bg: var(--tg-bg);
+  --color-tg-secondary: var(--tg-secondary);
+  --color-tg-text: var(--tg-text);
+  --color-tg-hint: var(--tg-hint);
+  --color-tg-button: var(--tg-button);
+  --color-tg-button-text: var(--tg-button-text);
+  --color-tg-border: var(--tg-border);
+}
 
 /* Telegram тема (светлая) */
 :root {
@@ -34,24 +45,18 @@
 }
 
 html, body {
-  /* 🚫 Отключаем системный Pull-to-Refresh (свайп вниз для обновления) */
   overscroll-behavior-y: contain;
-  
-  /* Фикс для iOS Safe Area (чтобы контент не уезжал под "челку" и Home Indicator) */
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
-  
-  /* Запрет зума при двойном тапе и фикс для iOS safe-area */
   touch-action: manipulation;
   height: 100%;
-  overflow: hidden; 
+  overflow: hidden;
 }
 
-/* Разрешаем скролл внутри основного контейнера, а не на body */
 #root {
   height: 100%;
   overflow-y: auto;
-  -webkit-overflow-scrolling: touch; /* Плавный скролл на iOS */
+  -webkit-overflow-scrolling: touch;
 }
 
 body {
@@ -86,11 +91,3 @@ body {
 .btn-primary:active {
   transform: scale(0.97);
 }
-
-/* Утилиты */
-.text-tg-hint { color: var(--tg-hint); }
-.text-tg-button { color: var(--tg-button); }
-.bg-tg-secondary { background: var(--tg-secondary); }
-.bg-tg-button { background: var(--tg-button); }
-.border-tg-button { border-color: var(--tg-button); }
-
