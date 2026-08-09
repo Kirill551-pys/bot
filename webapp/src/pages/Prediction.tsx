@@ -92,14 +92,20 @@ export function Prediction() {
               />
             </div>
 
-            {/* Команды с кнопкой свопа */}
-            <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-end">
-              <div>
-                <label className="block text-[12px] font-bold mb-1.5 text-[#8b9baa]">🏠 Хозяева</label>
+            {/* 🔥 АДАПТИВНАЯ СЕТКА:
+                На мобильных — вертикальный стек
+                На десктопе (md+) — grid с кнопкой посередине */}
+            <div className="flex flex-col gap-3 md:grid md:grid-cols-[1fr_auto_1fr] md:gap-2 md:items-end">
+              
+              {/* БЛОК "ХОЗЯЕВА" */}
+              <div className="w-full">
+                <label className="block text-[12px] font-bold mb-1.5 text-[#8b9baa]">
+                  🏠 Хозяева
+                </label>
                 <select
                   value={team1}
                   onChange={(e) => { setTeam1(e.target.value); hapticFeedback('light'); }}
-                  className="select-modern text-sm"
+                  className="select-modern text-sm w-full"
                 >
                   <option value="">--</option>
                   {filteredTeams.map((team: string) => (
@@ -108,17 +114,25 @@ export function Prediction() {
                 </select>
               </div>
 
-              {/* Кнопка свопа */}
-              <button onClick={swapTeams} className="swap-btn mb-1" title="Поменять местами">
+              {/* КНОПКА СВОПА — на мобильных по центру, на десктопе между селектами */}
+              <button
+                onClick={swapTeams}
+                className="swap-btn self-center md:self-auto md:mb-1"
+                title="Поменять местами"
+                aria-label="Поменять команды местами"
+              >
                 ⇄
               </button>
 
-              <div>
-                <label className="block text-[12px] font-bold mb-1.5 text-[#8b9baa]">🚌 Гости</label>
+              {/* БЛОК "ГОСТИ" */}
+              <div className="w-full">
+                <label className="block text-[12px] font-bold mb-1.5 text-[#8b9baa]">
+                  🚌 Гости
+                </label>
                 <select
                   value={team2}
                   onChange={(e) => { setTeam2(e.target.value); hapticFeedback('light'); }}
-                  className="select-modern text-sm"
+                  className="select-modern text-sm w-full"
                 >
                   <option value="">--</option>
                   {filteredTeams.filter((t: string) => t !== team1).map((team: string) => (
