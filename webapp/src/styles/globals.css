@@ -1,8 +1,7 @@
-/* 🔥 ПОДКЛЮЧАЕМ TAILWIND — ОБЯЗАТЕЛЬНО ПЕРВОЙ СТРОКОЙ! */
+/* 🔥 Tailwind — первой строкой! */
 @import "tailwindcss";
 
-/* 🔥 Регистрируем цвета Telegram в Tailwind,
-   чтобы работали классы bg-tg-*, text-tg-*, border-tg-* */
+/* 🔥 Цвета Telegram для Tailwind (bg-tg-*, text-tg-*) */
 @theme inline {
   --color-tg-bg: var(--tg-bg);
   --color-tg-secondary: var(--tg-secondary);
@@ -37,7 +36,7 @@
   }
 }
 
-/* Базовые стили */
+/* ⚠️ Обязательно с селектором * (раньше тут была битая конструкция без селектора) */
 * {
   margin: 0;
   padding: 0;
@@ -45,12 +44,9 @@
 }
 
 html, body {
-  overscroll-behavior-y: contain;
-  padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
-  touch-action: manipulation;
   height: 100%;
-  overflow: hidden;
+  overscroll-behavior-y: contain;
+  touch-action: manipulation;
 }
 
 #root {
@@ -74,6 +70,13 @@ body {
   padding: 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   border: 1px solid var(--tg-border);
+}
+
+/* 🔥 «Горячая» карточка — градиент обычным CSS, работает всегда */
+.card-hot {
+  background: linear-gradient(135deg, #f97316 0%, #dc2626 100%);
+  border: none;
+  color: #ffffff;
 }
 
 /* Кнопки */

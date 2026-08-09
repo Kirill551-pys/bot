@@ -1,28 +1,8 @@
-/* ============================================
-   БАЗОВЫЕ СТИЛИ (ОСНОВА)
-   ============================================ */
-
-:root {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-  color: var(--tg-text);
-  background-color: var(--tg-bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+/* Минимальный сброс. Все стили — в styles/globals.css */
+html, body, #root {
+  height: 100%;
 }
 
 body {
   margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-#root {
-  width: 100%;
-  max-width: 100%;
-  margin: 0;
-  padding: 0;
 }
