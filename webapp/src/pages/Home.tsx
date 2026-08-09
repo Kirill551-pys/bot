@@ -15,9 +15,14 @@ export function Home() {
   return (
     <div className="p-4 space-y-4">
       {/* Приветствие */}
-      <div className="card">
-        <h1 className="text-2xl font-bold">👋 Привет, {user?.first_name}!</h1>
-        <p className="text-tg-hint text-sm mt-1">Готов к прогнозам?</p>
+      <div className="card bg-gradient-to-br from-blue-500 to-purple-600 text-white shadow-xl">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">👋 Привет, {user?.first_name}!</h1>
+            <p className="text-white/80 text-sm mt-1">Готов к прогнозам?</p>
+          </div>
+          <span className="text-4xl">⚽</span>
+        </div>
       </div>
 
       {/* Горячий прогноз */}

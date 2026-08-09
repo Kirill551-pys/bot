@@ -151,16 +151,35 @@ class MatchRequest(BaseModel):
 class PredictionResponse(BaseModel):
     home_team: str
     away_team: str
+    timestamp: str
+    risk_level: str
+    
+    # Основные рынки
     result: dict
     total_goals: Optional[dict] = None
     both_scored: Optional[dict] = None
-    corners: Optional[dict] = None  
-    cards: Optional[dict] = None 
+    
+    # 🔥 НОВЫЕ РЫНКИ (добавь эти строки!)
+    first_half_result: Optional[dict] = None
+    total_shots: Optional[dict] = None
+    total_shots_on_target: Optional[dict] = None
+    total_fouls: Optional[dict] = None
+    btts_first_half: Optional[dict] = None
+    individual_totals: Optional[dict] = None
+    
+    # Старые поля (угловые/карточки — если модель их не возвращает, можно убрать)
+    corners: Optional[dict] = None
+    cards: Optional[dict] = None
+    
+    # Метаданные
     recommendation: Optional[str] = None
     trust_signal: Optional[str] = None
     is_hot: bool = False
     hot_confidence: float = 0.0
     hot_bet: Optional[str] = None
+
+    class Config:
+        extra = "allow" 
 
 class LeagueResponse(BaseModel):
     key: str
@@ -315,6 +334,14 @@ def get_team_stats(league: str, team: str, user: dict = Depends(get_current_user
     return TeamStatsResponse(**stats)
 
 @app.get("/api/leagues/{league}/seasons", response_model=List[str])
+def get_available_seasons(league: str, user: dict = Depends(get_current_user)):
+    """Возвращает список сезонов для лиги"""
+    if league not in MODELS:
+        raise HTTPException(status_code=404, detail="League not found")
+    df = MODELS[league].get('df')
+    if df is None or 'season' not in df.columns:
+        return []
+    return sorted(df['season'].unique().tolist())
 
 # ==================== ENDPOINTS: ПОЛЬЗОВАТЕЛЬ ====================
 @app.get("/api/user/subscription")

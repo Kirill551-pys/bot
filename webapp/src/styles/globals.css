@@ -1,21 +1,96 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* ============================================
+   ГЛОБАЛЬНЫЕ СТИЛИ TELEGRAM WEB APP
+   ============================================ */
 
-body {
-  background: var(--tg-theme-bg-color);
-  color: var(--tg-theme-text-color);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+/* Telegram тема (светлая) */
+:root {
+  --tg-bg: #f0f2f5;
+  --tg-secondary: #ffffff;
+  --tg-text: #1a1a1a;
+  --tg-hint: #707579;
+  --tg-button: #3390ec;
+  --tg-button-text: #ffffff;
+  --tg-border: #e0e0e0;
+}
+
+/* Telegram тема (тёмная) */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --tg-bg: #17212b;
+    --tg-secondary: #232e3c;
+    --tg-text: #f5f5f5;
+    --tg-hint: #708499;
+    --tg-button: #5288c1;
+    --tg-button-text: #ffffff;
+    --tg-border: #2b3a4a;
+  }
+}
+
+/* Базовые стили */
+* {
   margin: 0;
   padding: 0;
-  overscroll-behavior: none;
+  box-sizing: border-box;
 }
 
-.btn-primary {
-  @apply w-full py-3 px-4 rounded-xl font-semibold text-white transition-all active:scale-95;
-  background: var(--tg-theme-button-color);
+html, body {
+  /* 🚫 Отключаем системный Pull-to-Refresh (свайп вниз для обновления) */
+  overscroll-behavior-y: contain;
+  
+  /* Фикс для iOS Safe Area (чтобы контент не уезжал под "челку" и Home Indicator) */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  
+  /* Запрет зума при двойном тапе и фикс для iOS safe-area */
+  touch-action: manipulation;
+  height: 100%;
+  overflow: hidden; 
 }
 
+/* Разрешаем скролл внутри основного контейнера, а не на body */
+#root {
+  height: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch; /* Плавный скролл на iOS */
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--tg-bg);
+  color: var(--tg-text);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Карточки */
 .card {
-  @apply bg-tg-secondary rounded-2xl p-4 shadow-lg;
+  background: var(--tg-secondary);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--tg-border);
 }
+
+/* Кнопки */
+.btn-primary {
+  background: var(--tg-button);
+  color: var(--tg-button-text);
+  border: none;
+  border-radius: 12px;
+  padding: 12px 24px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-primary:active {
+  transform: scale(0.97);
+}
+
+/* Утилиты */
+.text-tg-hint { color: var(--tg-hint); }
+.text-tg-button { color: var(--tg-button); }
+.bg-tg-secondary { background: var(--tg-secondary); }
+.bg-tg-button { background: var(--tg-button); }
+.border-tg-button { border-color: var(--tg-button); }
+

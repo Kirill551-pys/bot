@@ -16,6 +16,7 @@ from xgboost import XGBClassifier
 from difflib import get_close_matches
 import warnings
 from typing import Dict, List, Tuple, Optional
+import math
 
 warnings.filterwarnings('ignore')
 
@@ -52,6 +53,20 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
+def poisson_over_1_5(avg_goals: float) -> float:
+    """
+    Вычисляет вероятность того, что команда забьет больше 1.5 гола (т.е. 2 и более).
+    Формула: 1 - P(0 голов) - P(1 гол)
+    """
+    if avg_goals <= 0:
+        return 0.0
+    p0 = math.exp(-avg_goals)
+    p1 = avg_goals * math.exp(-avg_goals)
+    prob_over_15 = 1.0 - (p0 + p1)
+    # Ограничиваем адекватными пределами (от 5% до 90%)
+    return round(max(0.05, min(0.90, prob_over_15)), 3)
+
+
 def safe_convert_goals(col):
     if col.dtype == 'object':
         col = col.astype(str).str.strip().str.replace(',', '.').str.replace('–', '-').str.replace('—', '-')
@@ -315,7 +330,21 @@ def calculate_team_metrics(df: pd.DataFrame, team_name: str, current_date: datet
     if 'home_fouls' in team_matches.columns:
         fouls = np.where(home_mask, team_matches['home_fouls'].values, team_matches['away_fouls'].values)
         metrics['avg_fouls'] = float(np.mean(fouls)) if len(fouls) > 0 else 12.0
-        
+
+    # 🎯 УГЛОВЫЕ (Corners)
+    if 'home_corners' in team_matches.columns:
+        corners = np.where(home_mask, team_matches['home_corners'].values, team_matches['away_corners'].values)
+        metrics['avg_corners'] = float(np.mean(corners)) if len(corners) > 0 else 4.5
+    else:
+        metrics['avg_corners'] = 4.5  # Значение по умолчанию
+    
+    # 🟨 ЖЁЛТЫЕ КАРТОЧКИ (Yellows)
+    if 'home_yellows' in team_matches.columns:
+        yellows = np.where(home_mask, team_matches['home_yellows'].values, team_matches['away_yellows'].values)
+        metrics['avg_yellows'] = float(np.mean(yellows)) if len(yellows) > 0 else 2.0
+    else:
+        metrics['avg_yellows'] = 2.0  # Значение по умолчанию
+
     # 1-й тайм
     if 'ht_home_goals' in team_matches.columns:
         ht_goals = np.where(home_mask, team_matches['ht_home_goals'].values, team_matches['ht_away_goals'].values)
@@ -338,9 +367,13 @@ def prepare_features_for_match(home_metrics: Dict, away_metrics: Dict, home_rati
         float(home_metrics.get('avg_xG', 1.35)), float(away_metrics.get('avg_xG', 1.05)),
         float(home_metrics.get('rest_days', 7)), float(away_metrics.get('rest_days', 7)),
         float(home_metrics.get('rest_days', 7) - away_metrics.get('rest_days', 7)),
-        # Новые фичи
         float(home_metrics.get('avg_fouls', 12.0)), float(away_metrics.get('avg_fouls', 12.0)),
-        float(home_metrics.get('avg_ht_goals', 0.5)), float(away_metrics.get('avg_ht_goals', 0.5))
+        float(home_metrics.get('avg_ht_goals', 0.5)), float(away_metrics.get('avg_ht_goals', 0.5)),
+        # 🎯 НОВЫЕ: Угловые и Карточки
+        float(home_metrics.get('avg_corners', 4.5)), float(away_metrics.get('avg_corners', 4.5)),
+        float(home_metrics.get('avg_corners', 4.5) + away_metrics.get('avg_corners', 4.5)),  # Суммарные угловые
+        float(home_metrics.get('avg_yellows', 2.0)), float(away_metrics.get('avg_yellows', 2.0)),
+        float(home_metrics.get('avg_yellows', 2.0) + away_metrics.get('avg_yellows', 2.0))   # Суммарные карточки
     ]
     return np.array(features).reshape(1, -1)
 
@@ -446,6 +479,50 @@ def train_models(df: pd.DataFrame) -> Optional[Dict]:
         models['btts_ht'] = CalibratedClassifierCV(XGBClassifier(n_estimators=80, max_depth=3, learning_rate=0.1, random_state=42), method='sigmoid', cv=tscv)
         models['btts_ht'].fit(X_scaled, y_btts_ht)
 
+    if 'home_corners' in df.columns and 'away_corners' in df.columns:
+        logger.info("🎯 Обучение модели угловых (ТБ 9.5)...")
+        total_corners = df_with_ratings['home_corners'].fillna(0) + df_with_ratings['away_corners'].fillna(0)
+        y_corners_95 = (total_corners > 9.5).astype(int).values
+        models['corners_over_9_5'] = CalibratedClassifierCV(
+            XGBClassifier(n_estimators=80, max_depth=3, learning_rate=0.1, random_state=42),
+            method='sigmoid', cv=tscv
+        )
+        models['corners_over_9_5'].fit(X_scaled, y_corners_95)
+        
+        # 🔥 10. УГЛОВЫЕ: Тотал больше 10.5
+        logger.info("🎯 Обучение модели угловых (ТБ 10.5)...")
+        y_corners_105 = (total_corners > 10.5).astype(int).values
+        models['corners_over_10_5'] = CalibratedClassifierCV(
+            XGBClassifier(n_estimators=80, max_depth=3, learning_rate=0.1, random_state=42),
+            method='sigmoid', cv=tscv
+        )
+        models['corners_over_10_5'].fit(X_scaled, y_corners_105)
+    else:
+        logger.warning("⚠️ Колонки угловых отсутствуют, пропускаем обучение corners-моделей")
+    
+    # 🔥 11. КАРТОЧКИ: Тотал больше 3.5
+    if 'home_yellows' in df.columns and 'away_yellows' in df.columns:
+        logger.info("🟨 Обучение модели карточек (ТБ 3.5)...")
+        total_yellows = df_with_ratings['home_yellows'].fillna(0) + df_with_ratings['away_yellows'].fillna(0)
+        y_yellows_35 = (total_yellows > 3.5).astype(int).values
+        models['yellows_over_3_5'] = CalibratedClassifierCV(
+            XGBClassifier(n_estimators=80, max_depth=3, learning_rate=0.1, random_state=42),
+            method='sigmoid', cv=tscv
+        )
+        models['yellows_over_3_5'].fit(X_scaled, y_yellows_35)
+        
+        # 🔥 12. КАРТОЧКИ: Тотал больше 4.5
+        logger.info("🟨 Обучение модели карточек (ТБ 4.5)...")
+        y_yellows_45 = (total_yellows > 4.5).astype(int).values
+        models['yellows_over_4_5'] = CalibratedClassifierCV(
+            XGBClassifier(n_estimators=80, max_depth=3, learning_rate=0.1, random_state=42),
+            method='sigmoid', cv=tscv
+        )
+        models['yellows_over_4_5'].fit(X_scaled, y_yellows_45)
+    else:
+        logger.warning("⚠️ Колонки карточек отсутствуют, пропускаем обучение cards-моделей")
+    
+    logger.info(f"✅ Обучение завершено! Моделей: {len(models)}")
     logger.info(f"✅ Обучение завершено! Моделей: {len(models)}")
     return {
         'models': models, 'le_home': le_home, 'le_away': le_away, 'scaler': scaler,
@@ -528,13 +605,51 @@ def predict_match(team1: str, team2: str, model_data: dict, ratings_dict: dict =
         if 'btts_ht' in models:
             prob = models['btts_ht'].predict_proba(features_scaled)[0][1]
             prediction['btts_first_half'] = {'Yes': float(prob), 'No': float(1 - prob)}
-            
-        # Индивидуальные тоталы
+
+        # 🎯 УГЛОВЫЕ (Corners)
+        if 'corners_over_9_5' in models and 'corners_over_10_5' in models:
+            prob_95 = models['corners_over_9_5'].predict_proba(features_scaled)[0][1]
+            prob_105 = models['corners_over_10_5'].predict_proba(features_scaled)[0][1]
+        
+            # Логическая корректировка: P(>10.5) не может быть больше P(>9.5)
+            if prob_105 > prob_95:
+                prob_105 = prob_95 * 0.85  # Снижаем вероятность
+        
+            prediction['corners'] = {
+                'Over 9.5': round(float(prob_95), 3),
+                'Under 9.5': round(float(1 - prob_95), 3),
+                'Over 10.5': round(float(prob_105), 3),
+                'Under 10.5': round(float(1 - prob_105), 3)
+            }
+    
+        # 🟨 КАРТОЧКИ (Yellows)
+        if 'yellows_over_3_5' in models and 'yellows_over_4_5' in models:
+            prob_35 = models['yellows_over_3_5'].predict_proba(features_scaled)[0][1]
+            prob_45 = models['yellows_over_4_5'].predict_proba(features_scaled)[0][1]
+        
+            # Логическая корректировка: P(>4.5) не может быть больше P(>3.5)
+            if prob_45 > prob_35:
+                prob_45 = prob_35 * 0.80
+        
+            prediction['cards'] = {
+                'Over 3.5': round(float(prob_35), 3),
+                'Under 3.5': round(float(1 - prob_35), 3),
+                'Over 4.5': round(float(prob_45), 3),
+                'Under 4.5': round(float(1 - prob_45), 3)
+            }
+
+        # Индивидуальные тоталы (через распределение Пуассона)
+        home_avg = home_metrics.get('avg_scored', 1.2)
+        away_avg = away_metrics.get('avg_scored', 1.0)
+    
+        home_over_15 = poisson_over_1_5(home_avg)
+        away_over_15 = poisson_over_1_5(away_avg)
+
         prediction['individual_totals'] = {
-            f'{team1} Over 1.5': round(min(0.85, home_metrics.get('avg_scored', 1.2) / 2.2), 3),
-            f'{team1} Under 1.5': round(1 - min(0.85, home_metrics.get('avg_scored', 1.2) / 2.2), 3),
-            f'{team2} Over 1.5': round(min(0.85, away_metrics.get('avg_scored', 1.0) / 2.2), 3),
-            f'{team2} Under 1.5': round(1 - min(0.85, away_metrics.get('avg_scored', 1.0) / 2.2), 3)
+            f'{team1} Over 1.5': home_over_15,
+            f'{team1} Under 1.5': round(1.0 - home_over_15, 3),
+            f'{team2} Over 1.5': away_over_15,
+            f'{team2} Under 1.5': round(1.0 - away_over_15, 3)
         }
         
         # Рекомендация
@@ -547,11 +662,34 @@ def predict_match(team1: str, team2: str, model_data: dict, ratings_dict: dict =
             
         prediction['recommendation'] = "\n".join(rec) if rec else "📊 Тактически сложный матч"
         prediction['trust_signal'] = get_trust_signal(prediction)
-        
-        max_prob = max(prediction.get('result', {HOME_WIN: 0.33, DRAW: 0.34, AWAY_WIN: 0.33}).values())
-        prediction['is_hot'] = max_prob > 0.65
-        prediction['hot_confidence'] = round(max_prob * 100, 1)
-        prediction['hot_bet'] = f"П1/П2 ({round(max_prob*100)}%)"
+
+        # 🔥 УМНЫЙ ПОИСК САМОЙ УВЕРЕННОЙ СТАВКИ
+        best_bet_name = "П1/П2"
+        best_bet_prob = 0.0
+
+        # Рынки для анализа (ключ -> человекочитаемое название)
+        bet_markets = {
+            'result': {'Home Win': f'П1 ({team1})', 'Draw': 'Ничья', 'Away Win': f'П2 ({team2})'},
+            'total_goals': {'Over 2.5': 'ТБ 2.5', 'Under 2.5': 'ТМ 2.5'},
+            'both_scored': {'Yes': 'ОЗ - Да', 'No': 'ОЗ - Нет'},
+        }
+
+        for market_key, labels in bet_markets.items():
+            if market_key in prediction and isinstance(prediction[market_key], dict):
+                for outcome_key, label in labels.items():
+                    if outcome_key in prediction[market_key]:
+                        prob = prediction[market_key][outcome_key]
+                        if prob > best_bet_prob:
+                            best_bet_prob = prob
+                            best_bet_name = label
+
+        # Гибкий критерий "горячести": высокая вероятность ИЛИ большой разрыв
+        result_probs = prediction.get('result', {HOME_WIN: 0.33, DRAW: 0.34, AWAY_WIN: 0.33}).values()
+        sorted_probs = sorted(result_probs, reverse=True)
+        gap = sorted_probs[0] - sorted_probs[1] if len(sorted_probs) > 1 else 0
+        prediction['is_hot'] = best_bet_prob > 0.60 or (best_bet_prob > 0.50 and gap > 0.20)
+        prediction['hot_confidence'] = round(best_bet_prob * 100, 1)
+        prediction['hot_bet'] = f"{best_bet_name} ({round(best_bet_prob*100)}%)"
         
         return prediction
     except Exception as e:

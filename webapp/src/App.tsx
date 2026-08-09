@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useTelegram } from './hooks/useTelegram';
 import { setupAuth } from './api/client';
@@ -36,7 +36,7 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      <HashRouter>
         <div className="min-h-screen bg-tg-bg pb-20">
           <Routes>
             <Route path="/" element={<Home />} />
@@ -47,35 +47,44 @@ function App() {
           </Routes>
           <BottomNav />
         </div>
-      </BrowserRouter>
+      </HashRouter>
     </QueryClientProvider>
   );
 }
 
 function BottomNav() {
   const location = useLocation();
-  
   const navItems = [
-    { path: '/', icon: '🔥', label: 'Главная' },
+    { path: '/', icon: '🏠', label: 'Главная' },
     { path: '/prediction', icon: '⚽', label: 'Прогноз' },
     { path: '/stats', icon: '📊', label: 'Стата' },
     { path: '/subscribe', icon: '💎', label: 'VIP' },
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-tg-secondary border-t border-gray-200 dark:border-gray-700 flex justify-around py-2 px-4 z-50 shadow-lg">
+    <nav 
+      className="fixed bottom-0 left-0 right-0 bg-tg-secondary border-t border-tg-border flex justify-around px-4 z-50 shadow-lg"
+      style={{ 
+        paddingTop: '0.5rem',
+        paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))' 
+      }}
+    >
       {navItems.map((item) => {
         const isActive = location.pathname === item.path;
         return (
           <Link
             key={item.path}
             to={item.path}
-            className={`flex flex-col items-center px-3 py-1 transition-all ${
-              isActive ? 'text-tg-button scale-110' : 'text-tg-hint'
+            className={`flex flex-col items-center px-3 py-1.5 transition-all duration-200 ${
+              isActive 
+                ? 'text-tg-button scale-110 -translate-y-1' 
+                : 'text-tg-hint hover:text-tg-text'
             }`}
           >
             <span className="text-2xl">{item.icon}</span>
-            <span className="text-xs mt-1 font-semibold">{item.label}</span>
+            <span className={`text-xs mt-1 font-semibold ${isActive ? 'text-tg-button' : ''}`}>
+              {item.label}
+            </span>
           </Link>
         );
       })}
