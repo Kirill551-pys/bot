@@ -21,13 +21,13 @@ export function Stats() {
     enabled: !!selectedLeague,
   });
 
-  const { data: topTeams } = useQuery({
+  const { data: topTeams, isLoading: isLoadingTop } = useQuery({
     queryKey: ['top-teams', selectedLeague, statType],
     queryFn: () => api.getTopTeams(selectedLeague, statType),
     enabled: !!selectedLeague,
   });
 
-  const { data: teamStats } = useQuery<TeamStats>({
+  const { data: teamStats, isLoading: isLoadingStats } = useQuery<TeamStats>({
     queryKey: ['team-stats', selectedLeague, selectedTeam],
     queryFn: () => api.getTeamStats(selectedLeague, selectedTeam),
     enabled: !!selectedLeague && !!selectedTeam,
@@ -35,20 +35,25 @@ export function Stats() {
 
   const statTypes = [
     { value: 'corners', label: '🎯 Угловые' },
-    { value: 'total_corners', label: '📊 Всего угловых' },
-    { value: 'corners_over_10_5', label: '🔼 ТБ 10.5 угл.' },
+    { value: 'total_corners', label: '📊 Всего угл.' },
+    { value: 'corners_over_10_5', label: '🔼 ТБ 10.5' },
     { value: 'yellows', label: '🟨 Карточки' },
     { value: 'over_2_5', label: '⚽ ТБ 2.5' },
     { value: 'btts', label: '🔄 Обе забьют' },
     { value: 'form', label: '📈 Форма' },
   ];
 
-  return (
-    <div className="p-4 space-y-4">
-      <h1 className="text-2xl font-bold">📊 Статистика</h1>
+  const medals = ['🥇', '🥈', '🥉'];
 
-      <div className="card">
-        <label className="block text-sm font-semibold mb-2">🏆 Выберите лигу:</label>
+  return (
+    <div className="p-4 space-y-4 max-w-lg mx-auto pb-28">
+      <h1 className="text-[22px] font-extrabold text-white animate-fade-up">📊 Статистика</h1>
+
+      {/* Выбор лиги */}
+      <div className="card animate-fade-up delay-1">
+        <label className="block text-[13px] font-bold mb-2 text-[#8b9baa] uppercase tracking-wide">
+          🏆 Лига
+        </label>
         <select
           value={selectedLeague}
           onChange={(e) => {
@@ -56,7 +61,7 @@ export function Stats() {
             setSelectedTeam('');
             hapticFeedback('light');
           }}
-          className="w-full p-2 rounded-lg bg-tg-secondary border border-gray-300"
+          className="select-modern"
         >
           <option value="">-- Выберите лигу --</option>
           {leagues?.map((league: League) => (
@@ -68,128 +73,171 @@ export function Stats() {
       </div>
 
       {selectedLeague && (
-        <div className="card">
-          <label className="block text-sm font-semibold mb-2">📈 Тип статистики:</label>
-          <div className="grid grid-cols-2 gap-2">
-            {statTypes.map((type) => (
-              <button
-                key={type.value}
-                onClick={() => {
-                  setStatType(type.value);
-                  hapticFeedback('light');
-                }}
-                className={`p-2 rounded-lg text-sm font-semibold transition-all ${
-                  statType === type.value
-                    ? 'bg-tg-button text-white'
-                    : 'bg-tg-secondary text-tg-text'
-                }`}
-              >
-                {type.label}
-              </button>
-            ))}
+        <>
+          {/* Тип статистики — горизонтальный скролл */}
+          <div className="animate-fade-up delay-2">
+            <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4" style={{ scrollbarWidth: 'none' }}>
+              {statTypes.map((type) => (
+                <button
+                  key={type.value}
+                  onClick={() => { setStatType(type.value); hapticFeedback('light'); }}
+                  className={`tab-btn shrink-0 ${statType === type.value ? 'active' : ''}`}
+                >
+                  {type.label}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
 
-      {selectedLeague && topTeams && (
-        <div className="card">
-          <h2 className="text-lg font-bold mb-3">
-            🏆 ТОП-3 по: {statTypes.find(t => t.value === statType)?.label}
-          </h2>
-          <div className="space-y-2">
-            {topTeams.map((team, idx) => (
-              <div
-                key={team.team}
-                className="flex items-center justify-between p-3 bg-tg-secondary rounded-lg"
+          {/* ТОП-3 */}
+          <div className="card animate-fade-up delay-3">
+            <h2 className="text-[15px] font-extrabold text-white mb-4">
+              🏆 ТОП-3: {statTypes.find(t => t.value === statType)?.label}
+            </h2>
+
+            {isLoadingTop ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="flex items-center gap-3">
+                    <div className="skeleton w-10 h-10 rounded-xl" />
+                    <div className="flex-1 space-y-1.5">
+                      <div className="skeleton h-4 w-2/3" />
+                      <div className="skeleton h-3 w-1/3" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : topTeams && topTeams.length > 0 ? (
+              <div className="space-y-2.5">
+                {topTeams.map((team: any, idx: number) => (
+                  <div
+                    key={team.team}
+                    className="flex items-center justify-between p-3.5 rounded-xl transition-all"
+                    style={{
+                      background: idx === 0
+                        ? 'linear-gradient(135deg, rgba(251,191,36,0.1), transparent)'
+                        : 'rgba(255,255,255,0.03)'
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">{medals[idx] || '🏅'}</span>
+                      <span className="font-bold text-white text-[14px]">{team.team}</span>
+                    </div>
+                    <span className="text-[13px] text-[#8b9baa] font-semibold">{team.label}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-center text-[#8b9baa] text-sm py-4">Нет данных для этого типа</p>
+            )}
+          </div>
+
+          {/* Выбор команды */}
+          {teams && (
+            <div className="card animate-fade-up delay-4">
+              <label className="block text-[13px] font-bold mb-2 text-[#8b9baa] uppercase tracking-wide">
+                🔍 Команда
+              </label>
+              <select
+                value={selectedTeam}
+                onChange={(e) => { setSelectedTeam(e.target.value); hapticFeedback('light'); }}
+                className="select-modern"
               >
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">
-                    {idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉'}
-                  </span>
-                  <span className="font-semibold">{team.team}</span>
+                <option value="">-- Выберите команду --</option>
+                {teams.map((team: string) => (
+                  <option key={team} value={team}>{team}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Статистика команды */}
+          {isLoadingStats && selectedTeam && (
+            <div className="card space-y-3 animate-fade-in">
+              <div className="skeleton h-6 w-40" />
+              <div className="grid grid-cols-2 gap-2">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="skeleton h-16 rounded-xl" />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {teamStats && !isLoadingStats && (
+            <div className="card space-y-4 animate-scale-in">
+              <div className="flex items-center justify-between">
+                <h2 className="text-[17px] font-extrabold text-white">{selectedTeam}</h2>
+                <span className="badge badge-blue">{teamStats.matches_played} матчей</span>
+              </div>
+
+              {/* Основная сетка */}
+              <div className="grid grid-cols-2 gap-2.5">
+                <StatCard label="Форма" value={`${teamStats.form_pct.toFixed(0)}%`} icon="📈" />
+                <StatCard label="Забито/матч" value={teamStats.avg_goals_for.toFixed(1)} icon="⚽" />
+                <StatCard label="Пропущено/матч" value={teamStats.avg_goals_against.toFixed(1)} icon="🥅" />
+                <StatCard label="ТБ 2.5" value={`${teamStats.over_2_5_pct.toFixed(0)}%`} icon="🔼" />
+                <StatCard label="Обе забьют" value={`${teamStats.btts_yes_pct.toFixed(0)}%`} icon="🔄" />
+                <StatCard label="ТМ 2.5" value={`${teamStats.under_2_5_pct.toFixed(0)}%`} icon="🔽" />
+              </div>
+
+              {/* Угловые */}
+              {(teamStats.avg_corners_for ?? 0) > 0 && (
+                <div className="rounded-xl p-4 bg-blue-500/5 border border-blue-500/10">
+                  <h3 className="font-bold text-white text-[14px] mb-2.5">🎯 Угловые</h3>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div>
+                      <p className="text-lg font-extrabold text-blue-400">{teamStats.avg_corners_for?.toFixed(1)}</p>
+                      <p className="text-[11px] text-[#8b9baa]">за матч</p>
+                    </div>
+                    <div>
+                      <p className="text-lg font-extrabold text-blue-400">{teamStats.corners_over_9_5_pct?.toFixed(0)}%</p>
+                      <p className="text-[11px] text-[#8b9baa]">ТБ 9.5</p>
+                    </div>
+                    <div>
+                      <p className="text-lg font-extrabold text-blue-400">{teamStats.corners_over_10_5_pct?.toFixed(0)}%</p>
+                      <p className="text-[11px] text-[#8b9baa]">ТБ 10.5</p>
+                    </div>
+                  </div>
                 </div>
-                <span className="text-tg-hint font-semibold">{team.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+              )}
 
-      {selectedLeague && teams && (
-        <div className="card">
-          <label className="block text-sm font-semibold mb-2">🔍 Статистика команды:</label>
-          <select
-            value={selectedTeam}
-            onChange={(e) => {
-              setSelectedTeam(e.target.value);
-              hapticFeedback('light');
-            }}
-            className="w-full p-2 rounded-lg bg-tg-secondary border border-gray-300"
-          >
-            <option value="">-- Выберите команду --</option>
-            {teams.map((team: string) => (
-              <option key={team} value={team}>{team}</option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {teamStats && (
-        <div className="card space-y-3">
-          <h2 className="text-lg font-bold">{selectedTeam}</h2>
-          
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="bg-tg-secondary p-2 rounded">
-              <div className="text-tg-hint">Матчей</div>
-              <div className="font-bold text-lg">{teamStats.matches_played}</div>
-            </div>
-            <div className="bg-tg-secondary p-2 rounded">
-              <div className="text-tg-hint">Форма</div>
-              <div className="font-bold text-lg">{teamStats.form_pct}%</div>
-            </div>
-            <div className="bg-tg-secondary p-2 rounded">
-              <div className="text-tg-hint">Забито в ср.</div>
-              <div className="font-bold text-lg">{teamStats.avg_goals_for}</div>
-            </div>
-            <div className="bg-tg-secondary p-2 rounded">
-              <div className="text-tg-hint">Пропущено</div>
-              <div className="font-bold text-lg">{teamStats.avg_goals_against}</div>
-            </div>
-            <div className="bg-tg-secondary p-2 rounded">
-              <div className="text-tg-hint">ТБ 2.5</div>
-              <div className="font-bold text-lg">{teamStats.over_2_5_pct}%</div>
-            </div>
-            <div className="bg-tg-secondary p-2 rounded">
-              <div className="text-tg-hint">Обе забьют</div>
-              <div className="font-bold text-lg">{teamStats.btts_yes_pct}%</div>
-            </div>
-          </div>
-
-          {(teamStats.avg_corners_for ?? 0) > 0 && (
-            <div className="bg-tg-secondary p-3 rounded-lg">
-              <h3 className="font-semibold mb-2">🎯 Угловые</h3>
-              <div className="text-sm">
-                В среднем: <b>{teamStats.avg_corners_for}</b> за матч
-              </div>
-              <div className="text-sm">
-                ТБ 9.5: <b>{teamStats.corners_over_9_5_pct ?? 0}%</b>
-              </div>
+              {/* Карточки */}
+              {(teamStats.avg_yellows_for ?? 0) > 0 && (
+                <div className="rounded-xl p-4 bg-yellow-500/5 border border-yellow-500/10">
+                  <h3 className="font-bold text-white text-[14px] mb-2.5">🟨 Карточки</h3>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div>
+                      <p className="text-lg font-extrabold text-yellow-400">{teamStats.avg_yellows_for?.toFixed(1)}</p>
+                      <p className="text-[11px] text-[#8b9baa]">за матч</p>
+                    </div>
+                    <div>
+                      <p className="text-lg font-extrabold text-yellow-400">{teamStats.yellows_over_3_5_pct?.toFixed(0)}%</p>
+                      <p className="text-[11px] text-[#8b9baa]">ТБ 3.5</p>
+                    </div>
+                    <div>
+                      <p className="text-lg font-extrabold text-yellow-400">{teamStats.yellows_over_4_5_pct?.toFixed(0)}%</p>
+                      <p className="text-[11px] text-[#8b9baa]">ТБ 4.5</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
-
-          {(teamStats.avg_yellows_for ?? 0) > 0 && (
-            <div className="bg-tg-secondary p-3 rounded-lg">
-              <h3 className="font-semibold mb-2">🟨 Карточки</h3>
-              <div className="text-sm">
-                В среднем: <b>{teamStats.avg_yellows_for}</b> за матч
-              </div>
-              <div className="text-sm">
-                ТБ 3.5: <b>{teamStats.yellows_over_3_5_pct ?? 0}%</b>
-              </div>
-            </div>
-          )}
-        </div>
+        </>
       )}
+    </div>
+  );
+}
+
+// Мини-карточка статистики
+function StatCard({ label, value, icon }: { label: string; value: string; icon: string }) {
+  return (
+    <div className="rounded-xl p-3.5 bg-white/[0.03] border border-white/5">
+      <div className="flex items-center gap-1.5 mb-1">
+        <span className="text-[12px]">{icon}</span>
+        <span className="text-[11px] text-[#8b9baa] font-medium">{label}</span>
+      </div>
+      <p className="text-[18px] font-extrabold text-white">{value}</p>
     </div>
   );
 }
