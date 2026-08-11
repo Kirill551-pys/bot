@@ -373,3 +373,100 @@ select, .select-modern, .search-input, input[type="text"] {
 
 /* Отступ под «чёлку» iPhone для контента */
 .safe-top { padding-top: env(safe-area-inset-top); }
+
+/* ============================================
+   КРАСИВЫЕ SELECT-ПОЛЯ
+   ============================================ */
+.select-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+/* Иконка слева внутри select */
+.select-wrapper .select-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 16px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.select-modern,
+select.select-modern {
+  width: 100%;
+  padding: 14px 40px 14px 42px; /* место под иконку слева и стрелку справа */
+  font-size: 15px;
+  font-weight: 600;
+  background-color: rgba(255, 255, 255, 0.04);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238b9baa' d='M6 8.825a.5.5 0 0 1-.354-.146l-4-4a.5.5 0 1 1 .708-.708L6 7.617l3.646-3.646a.5.5 0 1 1 .708.708l-4 4A.5.5 0 0 1 6 8.825z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 14px;
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  color: var(--tg-text);
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Если нет иконки — обычный padding */
+.select-modern:not(.has-icon) {
+  padding-left: 16px;
+}
+
+.select-modern:focus,
+select.select-modern:focus {
+  border-color: var(--tg-button);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+.select-modern:active {
+  transform: scale(0.99);
+}
+
+/* Стилизация option (работает в Chrome/Edge на desktop, игнорируется в iOS picker) */
+.select-modern option {
+  background: var(--tg-secondary);
+  color: var(--tg-text);
+  padding: 12px 16px;
+  font-weight: 500;
+  font-size: 15px;
+}
+
+.select-modern option:checked {
+  background: linear-gradient(135deg, var(--tg-button), #2563eb);
+  color: white;
+  font-weight: 700;
+}
+
+.select-modern option:hover {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+/* Placeholder option */
+.select-modern option[value=""] {
+  color: var(--tg-hint);
+  font-weight: 400;
+}
+
+/* ============================================
+   МОБИЛЬНЫЕ КАРТОЧКИ С МЕНЬШИМИ ОТСТУПАМИ
+   ============================================ */
+@media (max-width: 480px) {
+  .card {
+    padding: 16px;
+  }
+  
+  .select-modern {
+    padding-top: 13px;
+    padding-bottom: 13px;
+    font-size: 15px;
+  }
+}

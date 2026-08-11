@@ -33,7 +33,6 @@ export function Prediction() {
     enabled: !!team1 && !!team2 && !!selectedLeague,
   });
 
-  // Фильтрация команд по поиску
   const filteredTeams = useMemo(() => {
     if (!teams) return [];
     if (!teamSearch) return teams;
@@ -41,23 +40,29 @@ export function Prediction() {
     return teams.filter(t => t.toLowerCase().includes(q));
   }, [teams, teamSearch]);
 
-  // Своп команд
   const swapTeams = () => {
     setTeam1(team2);
     setTeam2(team1);
     hapticFeedback('medium');
   };
 
+  // Получаем название выбранной лиги для отображения
+  const selectedLeagueName = leagues?.find(l => l.key === selectedLeague)?.name;
+
   return (
-    <div className="p-4 space-y-4 pb-28 max-w-lg mx-auto">
-      <h1 className="text-[22px] font-extrabold text-white animate-fade-up">⚽ Выбор матча</h1>
+    <div className="p-3 sm:p-4 space-y-3 sm:space-y-4 pb-28 max-w-lg mx-auto">
+      {/* Заголовок с градиентом */}
+      <h1 className="text-[20px] sm:text-[22px] font-extrabold text-white animate-fade-up">
+        ⚽ Выбор матча
+      </h1>
 
       {/* ===== 1. ВЫБОР ЛИГИ ===== */}
-      <div className="card space-y-4 animate-fade-up delay-1">
-        <div>
-          <label className="block text-[12px] sm:text-[13px] font-bold mb-2 text-[#8b9baa] sm:uppercase sm:tracking-wide">
-            🏆 Лига
-          </label>
+      <div className="card animate-fade-up delay-1">
+        <label className="block text-[12px] font-bold mb-2 text-[#8b9baa]">
+          🏆 ЛИГА
+        </label>
+        <div className="select-wrapper">
+          <span className="select-icon">🏆</span>
           <select
             value={selectedLeague}
             onChange={(e) => {
@@ -66,75 +71,98 @@ export function Prediction() {
               setTeam2('');
               hapticFeedback('light');
             }}
-            className="select-modern"
+            className="select-modern has-icon"
           >
-            <option value="">-- Выберите лигу --</option>
+            <option value="" disabled>
+              — Выберите лигу —
+            </option>
             {leagues?.map((league: League) => (
               <option key={league.key} value={league.key}>
-                {league.name} ({league.teams_count} команд)
+                {league.name} • {league.teams_count} команд • {league.matches_count} матчей
               </option>
             ))}
           </select>
         </div>
 
-        {/* ===== 2. ВЫБОР КОМАНД ===== */}
-        {selectedLeague && teams && (
-          <div className="space-y-3 animate-fade-in">
-            {/* Поиск */}
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8b9baa]">🔍</span>
-              <input
-                type="text"
-                value={teamSearch}
-                onChange={(e) => setTeamSearch(e.target.value)}
-                placeholder="Поиск команды..."
-                className="search-input"
-              />
-            </div>
+        {/* Краткая информация о выбранной лиге */}
+        {selectedLeague && selectedLeagueName && (
+          <div className="mt-3 flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20 animate-fade-in">
+            <span className="text-sm">✅</span>
+            <p className="text-[13px] text-blue-300 font-medium">
+              Выбрана: <b>{selectedLeagueName}</b>
+            </p>
+          </div>
+        )}
+      </div>
 
-            {/* АДАПТИВНАЯ СЕТКА:
-                На мобильных — вертикальный стек
-                На десктопе (md+) — grid с кнопкой посередине */}
-            <div className="flex flex-col gap-3 md:grid md:grid-cols-[1fr_auto_1fr] md:gap-2 md:items-end">
-              
-              {/* БЛОК "ХОЗЯЕВА" */}
-              <div className="w-full">
-                <label className="block text-[12px] font-bold mb-1.5 text-[#8b9baa]">
-                  🏠 Хозяева
-                </label>
+      {/* ===== 2. ВЫБОР КОМАНД ===== */}
+      {selectedLeague && teams && (
+        <div className="card animate-fade-up delay-2">
+          <label className="block text-[12px] font-bold mb-3 text-[#8b9baa]">
+            🔍 КОМАНДЫ
+          </label>
+
+          {/* Поиск */}
+          <div className="relative mb-3">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8b9baa] text-sm">
+              🔍
+            </span>
+            <input
+              type="text"
+              value={teamSearch}
+              onChange={(e) => setTeamSearch(e.target.value)}
+              placeholder="Поиск команды..."
+              className="search-input"
+            />
+          </div>
+
+          {/* АДАПТИВНАЯ СЕТКА:
+              На мобильных — вертикальный стек
+              На десктопе (md+) — grid с кнопкой посередине */}
+          <div className="flex flex-col gap-3 md:grid md:grid-cols-[1fr_auto_1fr] md:gap-2 md:items-end">
+            {/* ХОЗЯЕВА */}
+            <div className="w-full">
+              <label className="block text-[11px] sm:text-[12px] font-bold mb-1.5 text-[#8b9baa]">
+                🏠 ХОЗЯЕВА
+              </label>
+              <div className="select-wrapper">
+                <span className="select-icon">🔴</span>
                 <select
                   value={team1}
                   onChange={(e) => { setTeam1(e.target.value); hapticFeedback('light'); }}
-                  className="select-modern text-sm w-full"
+                  className="select-modern has-icon text-sm"
                 >
-                  <option value="">--</option>
+                  <option value="" disabled>— Выбор —</option>
                   {filteredTeams.map((team: string) => (
                     <option key={team} value={team}>{team}</option>
                   ))}
                 </select>
               </div>
+            </div>
 
-              {/* КНОПКА СВОПА */}
-              <button
-                onClick={swapTeams}
-                className="swap-btn self-center md:self-auto md:mb-1"
-                title="Поменять местами"
-                aria-label="Поменять команды местами"
-              >
-                ⇄
-              </button>
+            {/* КНОПКА СВОПА */}
+            <button
+              onClick={swapTeams}
+              className="swap-btn self-center md:self-auto md:mb-1"
+              title="Поменять местами"
+              aria-label="Поменять команды местами"
+            >
+              ⇄
+            </button>
 
-              {/* БЛОК "ГОСТИ" */}
-              <div className="w-full">
-                <label className="block text-[12px] font-bold mb-1.5 text-[#8b9baa]">
-                  🚌 Гости
-                </label>
+            {/* ГОСТИ */}
+            <div className="w-full">
+              <label className="block text-[11px] sm:text-[12px] font-bold mb-1.5 text-[#8b9baa]">
+                🚌 ГОСТИ
+              </label>
+              <div className="select-wrapper">
+                <span className="select-icon">🔵</span>
                 <select
                   value={team2}
                   onChange={(e) => { setTeam2(e.target.value); hapticFeedback('light'); }}
-                  className="select-modern text-sm w-full"
+                  className="select-modern has-icon text-sm"
                 >
-                  <option value="">--</option>
+                  <option value="" disabled>— Выбор —</option>
                   {filteredTeams.filter((t: string) => t !== team1).map((team: string) => (
                     <option key={team} value={team}>{team}</option>
                   ))}
@@ -142,17 +170,29 @@ export function Prediction() {
               </div>
             </div>
           </div>
-        )}
-      </div>
+
+          {/* Превью выбранного матча */}
+          {team1 && team2 && (
+            <div className="mt-4 p-3 rounded-xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-white/10 animate-fade-in">
+              <p className="text-[11px] text-[#8b9baa] font-bold uppercase tracking-wider mb-1">
+                Выбранный матч
+              </p>
+              <p className="text-[15px] font-extrabold text-white">
+                {team1} <span className="text-[#8b9baa] font-normal mx-1">vs</span> {team2}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ===== 3. ЗАГРУЗКА ===== */}
       {isPredicting && (
-        <div className="card text-center py-10 animate-scale-in">
-          <div className="relative w-14 h-14 mx-auto mb-4">
+        <div className="card text-center py-8 sm:py-10 animate-scale-in">
+          <div className="relative w-12 h-12 sm:w-14 sm:h-14 mx-auto mb-4">
             <div className="absolute inset-0 rounded-full border-4 border-blue-500/20" />
             <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-500 animate-spin" />
           </div>
-          <p className="text-[#8b9baa] font-medium text-sm">
+          <p className="text-[#8b9baa] font-medium text-sm px-4">
             Анализируем статистику и генерируем прогноз...
           </p>
         </div>
@@ -160,27 +200,29 @@ export function Prediction() {
 
       {/* ===== 4. РЕЗУЛЬТАТ ===== */}
       {prediction && !isPredicting && (
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {/* Заголовок матча */}
           <div className="card text-center relative overflow-hidden animate-fade-up border-t-2 border-t-blue-500">
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent rounded-full" />
-            <h2 className="text-xl font-extrabold text-white leading-tight mt-2">
-              {prediction.home_team} <span className="text-[#8b9baa] font-normal text-base mx-1">vs</span> {prediction.away_team}
+            <h2 className="text-lg sm:text-xl font-extrabold text-white leading-tight mt-2">
+              {prediction.home_team}
+              <span className="text-[#8b9baa] font-normal text-base mx-1">vs</span>
+              {prediction.away_team}
             </h2>
-            <p className="text-[12px] text-[#8b9baa] mt-2 flex items-center justify-center gap-1.5">
+            <p className="text-[11px] sm:text-[12px] text-[#8b9baa] mt-2 flex items-center justify-center gap-1.5 flex-wrap">
               <span className="badge badge-blue">🤖 AI v2.2</span>
-              {prediction.is_hot && <span className="badge badge-gold animate-live">🔥 HOT</span>}
+              {prediction.is_hot && (
+                <span className="badge badge-gold animate-live">🔥 HOT</span>
+              )}
             </p>
           </div>
 
-          {/* Победитель матча */}
           <Section title="🏆 Победитель матча" delay={1}>
             <ProbabilityBar label={prediction.home_team} value={prediction.result['Home Win']} color="blue" isFavorite={prediction.result['Home Win'] >= 0.5} />
             <ProbabilityBar label="Ничья" value={prediction.result['Draw']} color="gray" />
             <ProbabilityBar label={prediction.away_team} value={prediction.result['Away Win']} color="orange" isFavorite={prediction.result['Away Win'] >= 0.5} />
           </Section>
 
-          {/* Голы */}
           <Section title="⚽ Голы" delay={2}>
             <SubSection title="Тотал 2.5">
               <ProbabilityBar label="Больше (ТБ)" value={prediction.total_goals['Over 2.5']} color="green" />
@@ -193,7 +235,6 @@ export function Prediction() {
             </SubSection>
           </Section>
 
-          {/* 1-й тайм */}
           {(prediction.first_half_result || prediction.btts_first_half) && (
             <Section title="⏱️ 1-й тайм" delay={3}>
               {prediction.first_half_result && (
@@ -215,7 +256,6 @@ export function Prediction() {
             </Section>
           )}
 
-          {/* Статистика матча */}
           {(prediction.total_shots || prediction.total_shots_on_target || prediction.total_fouls) && (
             <Section title="📊 Статистика матча" delay={3}>
               <div className="grid grid-cols-1 gap-4">
@@ -247,7 +287,6 @@ export function Prediction() {
             </Section>
           )}
 
-          {/* Индивидуальные тоталы */}
           {prediction.individual_totals && (
             <Section title="⚽ Индивидуальные тоталы (ТБ 1.5)" delay={4}>
               <div className="grid grid-cols-1 gap-3">
@@ -265,7 +304,6 @@ export function Prediction() {
             </Section>
           )}
 
-          {/* Угловые и карточки */}
           {(prediction.corners || prediction.cards) && (
             <Section title="🎯 Стандарты и дисциплина" delay={4}>
               {prediction.corners && (
@@ -286,21 +324,22 @@ export function Prediction() {
             </Section>
           )}
 
-          {/* Рекомендация */}
           <div className="card animate-fade-up delay-5 relative overflow-hidden border-l-4 border-l-blue-500">
             {prediction.recommendation && (
               <div className="mb-4">
-                <h3 className="font-extrabold text-white text-[16px] mb-2">💡 Рекомендация модели</h3>
-                <p className="text-[14px] leading-relaxed whitespace-pre-line text-white/75">
+                <h3 className="font-extrabold text-white text-[15px] sm:text-[16px] mb-2">
+                  💡 Рекомендация модели
+                </h3>
+                <p className="text-[13px] sm:text-[14px] leading-relaxed whitespace-pre-line text-white/75">
                   {prediction.recommendation}
                 </p>
               </div>
             )}
             <div className="pt-3 border-t border-white/10 text-center">
-              <p className="text-[11px] uppercase tracking-widest text-[#8b9baa] font-bold mb-1">
+              <p className="text-[10px] sm:text-[11px] uppercase tracking-widest text-[#8b9baa] font-bold mb-1">
                 🛡️ Уровень доверия
               </p>
-              <p className="text-lg font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
+              <p className="text-base sm:text-lg font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
                 {prediction.trust_signal}
               </p>
             </div>
@@ -316,7 +355,7 @@ export function Prediction() {
 function Section({ title, children, delay = 0 }: { title: string; children: React.ReactNode; delay?: number }) {
   return (
     <div className={`card space-y-3 animate-fade-up delay-${Math.min(delay, 5)}`}>
-      <h3 className="font-extrabold text-[15px] text-white border-b border-white/8 pb-2.5">
+      <h3 className="font-extrabold text-[14px] sm:text-[15px] text-white border-b border-white/8 pb-2.5">
         {title}
       </h3>
       {children}
@@ -327,7 +366,7 @@ function Section({ title, children, delay = 0 }: { title: string; children: Reac
 function SubSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="space-y-2.5">
-      <h4 className="text-[13px] font-bold text-[#8b9baa]">{title}</h4>
+      <h4 className="text-[12px] sm:text-[13px] font-bold text-[#8b9baa]">{title}</h4>
       {children}
     </div>
   );
@@ -348,7 +387,7 @@ function ProbabilityBar({
 
   return (
     <div className="group">
-      <div className="flex justify-between text-[13px] mb-1.5">
+      <div className="flex justify-between text-[12px] sm:text-[13px] mb-1.5">
         <span className={`font-semibold ${isFavorite ? 'text-blue-400' : 'text-white/80'}`}>
           {label}
           {isFavorite && <span className="ml-1.5 text-[10px]">⭐</span>}
