@@ -60,6 +60,18 @@ export function Home() {
                 {hot.home_team} — {hot.away_team}
               </p>
 
+              {/* Время матча */}
+              {hot.commence_time && (
+                <p className="text-white/50 text-[11px] mt-1">
+                  ⏰ {new Date(hot.commence_time).toLocaleString('ru-RU', {
+                    day: 'numeric',
+                    month: 'short',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </p>
+              )}
+
               <div className="mt-4 flex items-center gap-4">
                 {/* Кольцо уверенности */}
                 <div className="relative w-[72px] h-[72px] shrink-0">
@@ -80,8 +92,49 @@ export function Home() {
                 <div className="min-w-0 flex-1">
                   <p className="text-white text-[15px] font-bold truncate">💎 {hot.hot_bet}</p>
                   <p className="text-white/70 text-[12px] mt-1 leading-snug">{hot.trust_signal}</p>
+
+                  {/* Кэфы букмекеров (если есть) */}
+                  {hot.odds && hot.odds.home_win && (
+                    <div className="flex gap-2 mt-2">
+                      <span className="bg-white/15 rounded px-2 py-0.5 text-[11px] font-bold text-white">
+                        П1 {hot.odds.home_win}
+                      </span>
+                      <span className="bg-white/15 rounded px-2 py-0.5 text-[11px] font-bold text-white">
+                        X {hot.odds.draw}
+                      </span>
+                      <span className="bg-white/15 rounded px-2 py-0.5 text-[11px] font-bold text-white">
+                        П2 {hot.odds.away_win}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
+
+              {/* 🆕 Дополнительные рынки (угловые, карточки) */}
+              {hot.additional_markets && hot.additional_markets.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-white/15 space-y-2">
+                  <p className="text-white/60 text-[11px] font-bold uppercase tracking-wider">
+                    📊 Дополнительные рынки
+                  </p>
+                  {hot.additional_markets.map((market: any) => (
+                    <div key={market.market} className="flex items-center justify-between bg-white/8 rounded-lg px-3 py-2">
+                      <div>
+                        <p className="text-white text-[13px] font-bold">{market.label}</p>
+                        <p className="text-white/50 text-[11px]">
+                          Модель: {Math.round(market.probability * 100)}%
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-white text-[14px] font-extrabold">{market.fair_odds}</p>
+                        <p className="text-white/50 text-[10px]">справедл. кэф</p>
+                      </div>
+                    </div>
+                  ))}
+                  <p className="text-white/40 text-[10px] italic mt-1">
+                    💡 Ищите кэф выше справедливого в вашем букмекере
+                  </p>
+                </div>
+              )}
 
               <Link
                 to={`/prediction?team1=${encodeURIComponent(hot.home_team)}&team2=${encodeURIComponent(hot.away_team)}&league=${hot.league}`}

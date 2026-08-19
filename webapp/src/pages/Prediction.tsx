@@ -6,6 +6,24 @@ import { useSearchParams } from 'react-router-dom';
 import type { League, Prediction } from '../api/client';
 
 export function Prediction() {
+
+// ---- Тиры лиг по данным бэктеста ----
+// S — уверенные прогнозы заходят ≥58%, B — средне, C — не рекомендуем как ставку
+  const LEAGUE_TIERS: Record<string, 'S' | 'B' | 'C'> = {
+    greece: 'S', scotland: 'S', portugueseLiga: 'S', laLiga: 'S',
+    china: 'S', finland: 'S', dania: 'S', epl: 'S',
+    seriaA: 'S', poland: 'S', eredivisise: 'S', rpl: 'S',
+    norway: 'B', brazil: 'B', turkey: 'B', belgium: 'B',
+    bundesliga: 'B', mexico: 'B', romania: 'B',
+    argentina: 'C', usa: 'C', japan: 'C', austria: 'C', ligue1: 'C',
+  };
+
+  const TIER_STYLES = {
+    S: { border: 'border-l-emerald-500', badge: 'bg-emerald-500/15 text-emerald-400', label: '⭐ S-тир' },
+    B: { border: 'border-l-blue-500',   badge: 'bg-blue-500/15 text-blue-400',   label: '👍 B-тир' },
+    C: { border: 'border-l-yellow-500', badge: 'bg-yellow-500/15 text-yellow-400', label: '⚠️ C-тир' },
+  } as const;
+
   const { hapticFeedback } = useTelegram();
   const [searchParams] = useSearchParams();
 
@@ -32,6 +50,9 @@ export function Prediction() {
     queryFn: () => api.getMatchPrediction(team1, team2, selectedLeague),
     enabled: !!team1 && !!team2 && !!selectedLeague,
   });
+
+  const tier = LEAGUE_TIERS[selectedLeague] ?? 'C';          // champions_league и новые лиги → 'C'
+  const tierStyle = TIER_STYLES[tier];
 
   const filteredTeams = useMemo(() => {
     if (!teams) return [];
@@ -86,14 +107,16 @@ export function Prediction() {
 
         {/* Краткая информация о выбранной лиге */}
         {selectedLeague && selectedLeagueName && (
-          <div className="mt-3 flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20 animate-fade-in">
-            <span className="text-sm">✅</span>
-            <p className="text-[13px] text-blue-300 font-medium">
-              Выбрана: <b>{selectedLeagueName}</b>
+          <div className={`mt-3 flex items-center gap-2 px-3 py-2 rounded-lg border-l-4 ${tierStyle.border} bg-white/5 animate-fade-in`}>
+            <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold ${tierStyle.badge}`}>
+              {tierStyle.label}
+            </span>
+            <p className="text-[13px] text-white/80 font-medium">
+              <b>{selectedLeagueName}</b>
             </p>
           </div>
         )}
-      </div>
+        </div>
 
       {/* ===== 2. ВЫБОР КОМАНД ===== */}
       {selectedLeague && teams && (
@@ -211,6 +234,7 @@ export function Prediction() {
             </h2>
             <p className="text-[11px] sm:text-[12px] text-[#8b9baa] mt-2 flex items-center justify-center gap-1.5 flex-wrap">
               <span className="badge badge-blue">🤖 AI v2.2</span>
+              <span className={`badge ${tierStyle.badge}`}>{tierStyle.label}</span>
               {prediction.is_hot && (
                 <span className="badge badge-gold animate-live">🔥 HOT</span>
               )}
@@ -369,6 +393,37 @@ function SubSection({ title, children }: { title: string; children: React.ReactN
       <h4 className="text-[12px] sm:text-[13px] font-bold text-[#8b9baa]">{title}</h4>
       {children}
     </div>
+  );
+}
+
+// ==================== КОМПОНЕНТ БЕЙДЖА ТИРА ====================
+function TierBadge({ tier }: { tier: string }) {
+  const config: Record<string, { label: string; bg: string; text: string }> = {
+    S: {
+      label: '🔥 S-ТИР',
+      bg: 'bg-gradient-to-r from-yellow-400 to-orange-500',
+      text: 'text-white',
+    },
+    B: {
+      label: '⭐ B-ТИР',
+      bg: 'bg-gradient-to-r from-blue-400 to-indigo-500',
+      text: 'text-white',
+    },
+    C: {
+      label: '⚠️ C-ТИР',
+      bg: 'bg-gray-400',
+      text: 'text-white',
+    },
+  };
+
+  const c = config[tier] || config.C;
+
+  return (
+    <span
+      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-extrabold shadow-md ${c.bg} ${c.text}`}
+    >
+      {c.label}
+    </span>
   );
 }
 

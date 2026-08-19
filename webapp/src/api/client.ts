@@ -11,11 +11,38 @@ export interface TelegramUser {
   language_code?: string;
 }
 
+// 🆕 НОВЫЙ ИНТЕРФЕЙС: дополнительный рынок (угловые, карточки)
+export interface AdditionalMarket {
+  market: string;          // 'corners_over_9_5', 'yellows_over_3_5' и т.д.
+  label: string;           // '🎯 Угловые ТБ 9.5'
+  probability: number;     // 0.0 - 1.0
+  fair_odds: number;       // "справедливый" коэффициент
+  tier: 'S' | 'B' | 'C';   // тир уверенности
+  hint: string;            // подсказка "Ищите кэф выше X.XX"
+}
+
+// 🆕 НОВЫЙ ИНТЕРФЕЙС: кэфы букмекеров
+export interface BookmakerOdds {
+  home_win?: number;
+  draw?: number;
+  away_win?: number;
+  over_2_5?: number;
+  under_2_5?: number;
+}
+
+// 🆕 НОВЫЙ ИНТЕРФЕЙС: value для каждого исхода
+export interface ValueData {
+  home_win: number;   // положительный = выгодно, отрицательный = невыгодно
+  draw: number;
+  away_win: number;
+}
+
 export interface Prediction {
   home_team: string;
   away_team: string;
   timestamp: string;
   risk_level: string;
+  hot_bet_tier?: 'S' | 'B' | 'C' | null;
   result: {
     'Home Win': number;
     'Draw': number;
@@ -41,7 +68,7 @@ export interface Prediction {
     'Over 4.5': number;
     'Under 4.5': number;
   };
-   first_half_result?: {
+  first_half_result?: {
     'Home Win': number;
     'Draw': number;
     'Away Win': number;
@@ -58,17 +85,27 @@ export interface Prediction {
     'Over 23.5': number;
     'Under 23.5': number;
   };
-  btts_first_half?:{
+  btts_first_half?: {
     'Yes': number;
     'No': number;
   };
-  individual_totals?: Record<string, number>; 
+  individual_totals?: Record<string, number>;
 
   recommendation: string;
   trust_signal: string;
   is_hot: boolean;
   hot_confidence: number;
   hot_bet: string;
+
+  // 🆕 НОВЫЕ ПОЛЯ ДЛЯ HOT-ПРОГНОЗА (Этап 1+2)
+  league?: string;                // ключ лиги ('epl', 'rpl'...)
+  league_name?: string;           // название с флагом ('🇬🇧 Англия...')
+  tier?: string;                  // тир лиги ('S', 'B', 'C')
+  commence_time?: string;         // ISO-время начала матча
+  odds?: BookmakerOdds;           // реальные кэфы букмекеров
+  value?: ValueData;              // value для исхода
+  best_value?: number;            // лучший value среди всех исходов
+  additional_markets?: AdditionalMarket[]; // угловые, карточки со справедливым кэфом
 }
 
 export interface League {
@@ -104,10 +141,26 @@ export interface TeamStats {
   form_pct: number;
 }
 
+// 🆕 ОБНОВЛЁН: наследует все поля Prediction (включая odds, value, additional_markets)
 export interface HotPrediction extends Prediction {
+  // Поле `confidence` убрано, т.к. у нас есть `hot_confidence` из Prediction
+}
+
+// 🆕 НОВЫЙ ИНТЕРФЕЙС: будущий матч из The Odds API
+export interface Fixture {
+  id: string;
+  home_team: string;
+  away_team: string;
+  commence_time: string;    // ISO datetime
+  league_key: string;
+  odds: BookmakerOdds;
+}
+
+// 🆕 НОВЫЙ ИНТЕРФЕЙС: группа матчей по лиге
+export interface LeagueFixtures {
   league: string;
   league_name: string;
-  confidence: number;
+  matches: Fixture[];
 }
 
 export interface UserSubscription {
@@ -166,7 +219,6 @@ class ApiClient {
     );
   }
 
-  // Устанавливает initData от Telegram для авторизации
   setInitData(initData: string) {
     this.initData = initData;
   }
@@ -223,6 +275,35 @@ class ApiClient {
     }
   }
 
+  // ==================== 🆕 РАСПИСАНИЕ МАТЧЕЙ ====================
+
+  /**
+   * Получить расписание матчей для всех активных лиг.
+   * Использует кэш на бэкенде (не тратит API кредиты при повторных вызовах).
+   */
+  async getFixtures(): Promise<LeagueFixtures[]> {
+    try {
+      const response = await this.client.get<LeagueFixtures[]>('/api/fixtures');
+      return response.data;
+    } catch (error) {
+      console.error('Ошибка получения расписания:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Получить расписание матчей для конкретной лиги.
+   */
+  async getFixturesForLeague(leagueKey: string): Promise<LeagueFixtures> {
+    try {
+      const response = await this.client.get<LeagueFixtures>(`/api/fixtures/${leagueKey}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Ошибка получения расписания для ${leagueKey}:`, error);
+      throw new Error(`Не удалось загрузить расписание для лиги`);
+    }
+  }
+
   // ==================== СТАТИСТИКА ====================
 
   async getTeamStats(leagueKey: string, teamName: string): Promise<TeamStats> {
@@ -264,9 +345,6 @@ class ApiClient {
     }
   }
 
-  /**
-   * Активировать пробный период (3 дня бесплатно)
-   */
   async activateTrial(): Promise<{ success: boolean; message: string }> {
     try {
       const response = await this.client.post<{ success: boolean; message: string }>(
@@ -306,13 +384,10 @@ class ApiClient {
 
 export const api = new ApiClient();
 
-// Утилита для инициализации клиента с initData от Telegram
 export function initApiClient(initData: string) {
   api.setInitData(initData);
 }
 
-// 🔥 НОВАЯ ФУНКЦИЯ — для совместимости с App.tsx
 export function setupAuth(initData: string) {
   api.setInitData(initData);
 }
-

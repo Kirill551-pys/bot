@@ -108,3 +108,70 @@ SUBSCRIPTION_PRICES = {
 REFERRAL_BONUS_PERCENT = 15  # 15% от первой оплаты реферала
 REFERRAL_FREE_DAYS = 1       # 1 день бесплатно за каждого реферала
 
+# Тиры рынков по ACC при уверенности
+MARKET_TIERS = {
+    'S': ['shots_over_22_5', 'sot_over_8_5', 'yellows_over_3_5',
+          'total_goals', 'corners_over_9_5', 'both_scored', 'result'],
+    'B': ['fouls_over_23_5', 'yellows_over_4_5', 'individual_totals'],
+    'C': ['first_half_result', 'btts_first_half', 'corners_over_10_5'],  # не показывать как ставку
+}
+CONF_THRESHOLD = 0.55  # показываем ставку только при уверенности >= 55%
+
+# ==================== ТИРЫ ЛИГ ПО УВЕРЕННОСТИ ====================
+# S — прогнозы заходят чаще, C — не рекомендуем как ставку
+LEAGUE_TIERS = {
+    'greece': 'S', 'scotland': 'S', 'portugueseLiga': 'S', 'laLiga': 'S',
+    'china': 'S', 'finland': 'S', 'dania': 'S', 'epl': 'S',
+    'seriaA': 'S', 'poland': 'S', 'eredivisise': 'S', 'rpl': 'S',
+    'norway': 'B', 'brazil': 'B', 'turkey': 'B', 'belgium': 'B',
+    'bundesliga': 'B', 'mexico': 'B', 'romania': 'B',
+    'argentina': 'C', 'usa': 'C', 'japan': 'C', 'austria': 'C', 'ligue1': 'C',
+}
+
+# Минимальная уверенность для hot-прогнозов в зависимости от тира лиги
+HOT_MIN_CONFIDENCE = {
+    'S': 60,
+    'B': 65,
+    'C': 70,
+}
+
+# ==================== THE ODDS API ====================
+ODDS_API_KEY = os.getenv("ODDS_API_KEY", "")
+
+# Кэш расписания в секундах (по умолчанию 6 часов)
+# Увеличь до 43200 (12 часов) если хочешь экономить кредиты
+FIXTURES_CACHE_TTL = int(os.getenv("FIXTURES_CACHE_TTL", str(6 * 3600)))
+
+# Маппинг наших лиг на sport_key из The Odds API
+ODDS_LEAGUES_MAP = {
+    "epl":              "soccer_epl",
+    "laLiga":           "soccer_spain_la_liga",
+    "bundesliga":       "soccer_germany_bundesliga",
+    "seriaA":           "soccer_italy_serie_a",
+    "ligue1":           "soccer_france_ligue_one",
+    "champions_league": "soccer_uefa_champs_league",
+    "eredivisise":      "soccer_netherlands_eredivisie",
+    "portugueseLiga":   "soccer_portugal_primeira_liga",
+    "turkey":           "soccer_turkey_super_league",
+    "rpl":              "soccer_russia_premier_league",
+    # "scotland":         "soccer_scotland_premiership",
+    "greece":           "soccer_greece_super_league",
+    "poland":           "soccer_poland_ekstraklasa",
+    "argentina":        "soccer_argentina_primera_division",
+    # "brazil":           "soccer_brazil_serie_a",
+    "usa":              "soccer_usa_mls",
+    # "mexico":           "soccer_mexico_liga_mx",
+    "japan":            "soccer_japan_j_league",
+    "china":            "soccer_china_superleague",
+    "norway":           "soccer_norway_eliteserien",
+    "finland":          "soccer_finland_veikkausliiga",
+    "dania":            "soccer_denmark_superliga",
+    "austria":          "soccer_austria_bundesliga",
+    # "romania":          "soccer_romania_liga_1",
+}
+
+# Лиги, для которых запрашиваем коэффициенты (для экономии кредитов)
+# Чем меньше лиг — тем меньше кредитов тратится
+ODDS_ACTIVE_LEAGUES = [
+    "epl", "laLiga", "bundesliga", "seriaA", "ligue1", "rpl"
+]

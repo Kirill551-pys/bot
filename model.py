@@ -17,6 +17,8 @@ from difflib import get_close_matches
 import warnings
 from typing import Dict, List, Tuple, Optional
 import math
+from config import MARKET_TIERS, CONF_THRESHOLD
+
 
 warnings.filterwarnings('ignore')
 
@@ -66,12 +68,28 @@ def poisson_over_1_5(avg_goals: float) -> float:
     # Ограничиваем адекватными пределами (от 5% до 90%)
     return round(max(0.05, min(0.90, prob_over_15)), 3)
 
+def poisson_pmf(k, lam):
+    return math.exp(-lam) * lam ** k / math.factorial(k)
 
-def safe_convert_goals(col):
-    if col.dtype == 'object':
-        col = col.astype(str).str.strip().str.replace(',', '.').str.replace('–', '-').str.replace('—', '-')
-        col = col.replace(['', '-', '–', '—', 'nan', 'NaN', 'None', ' ', 'null', 'NULL'], '0')
-    return pd.to_numeric(col, errors='coerce').fillna(0).astype(int)
+def poisson_over_2_5(lam):
+    return 1 - sum(poisson_pmf(k, lam) for k in range(3))
+
+def poisson_btts(lam_h, lam_a):
+    return (1 - math.exp(-lam_h)) * (1 - math.exp(-lam_a))
+
+def predict_goals_markets(models, X, home_metrics, away_metrics):
+    """Возвращает смешанные (XGB + Пуассон) вероятности ТБ2.5 и ОЗ."""
+    lam_h = home_metrics.get('avg_scored', 1.2)
+    lam_a = away_metrics.get('avg_scored', 1.0)
+    out = {}
+    if 'total' in models:
+        p = models['total'].predict_proba(X)[0][1]
+        out['total'] = 0.5 * p + 0.5 * poisson_over_2_5(lam_h + lam_a)
+    if 'btts' in models:
+        p = models['btts'].predict_proba(X)[0][1]
+        out['btts'] = 0.5 * p + 0.5 * poisson_btts(lam_h, lam_a)
+    return out
+
 
 def validate_training_data(df: pd.DataFrame) -> tuple:
     issues = []
@@ -106,128 +124,6 @@ def assign_football_season(df: pd.DataFrame) -> pd.DataFrame:
     
     # Создаем строку формата "2025-2026"
     df['season'] = season_start_year.astype(str) + '-' + season_end_year.astype(str)
-    return df
-
-# ==================== ЗАГРУЗКА ДАННЫХ ====================
-def load_matches_data(data_path: str) -> Optional[pd.DataFrame]:
-    logger.info(f"📥 Загрузка данных из {data_path}")
-    if not os.path.exists(data_path):
-        logger.error(f"❌ Файл не найден: {data_path}")
-        return None
-    
-    encodings = ['utf-8', 'cp1252', 'latin1', 'cp1251', 'utf-8-sig']
-    df = None
-    
-    for enc in encodings:
-        try:
-            with open(data_path, 'r', encoding=enc) as f:
-                first_lines = [f.readline() for _ in range(5)]
-            skip_rows = sum(1 for line in first_lines if line.strip().startswith('#') or line.strip() == '')
-            
-            df = pd.read_csv(data_path, encoding=enc, skiprows=skip_rows, on_bad_lines='warn', engine='python')
-            # Очищаем названия колонок от лишних пробелов
-            df.columns = df.columns.str.strip()
-            logger.info(f"✅ Файл прочитан (кодировка: {enc})")
-            break
-        except Exception:
-            continue
-    
-    if df is None:
-        logger.error(f"❌ Не удалось прочитать файл")
-        return None
-    
-    date_col = next((col for col in df.columns if 'date' in col.lower()), None)
-    if date_col:
-        df[date_col] = pd.to_datetime(df[date_col], errors='coerce', dayfirst=True)
-        df = df.rename(columns={date_col: 'date'})
-    else:
-        logger.error("❌ Колонка с датой не найдена!")
-        return None
-    
-    df = df.dropna(subset=['date']).sort_values('date').reset_index(drop=True)
-    
-    # 🔥 НАДЕЖНЫЙ МАППИНГ КОЛОНОК
-    rename_map = {}
-    
-    # 1. Команды
-    if 'HomeTeam' in df.columns and 'home_team' not in df.columns: rename_map['HomeTeam'] = 'home_team'
-    elif 'Home' in df.columns and 'home_team' not in df.columns: rename_map['Home'] = 'home_team'
-    
-    if 'AwayTeam' in df.columns and 'away_team' not in df.columns: rename_map['AwayTeam'] = 'away_team'
-    elif 'Away' in df.columns and 'away_team' not in df.columns: rename_map['Away'] = 'away_team'
-    
-    # 2. Голы
-    if 'FTHG' in df.columns and 'home_goals' not in df.columns: rename_map['FTHG'] = 'home_goals'
-    elif 'HG' in df.columns and 'home_goals' not in df.columns: rename_map['HG'] = 'home_goals'
-    
-    if 'FTAG' in df.columns and 'away_goals' not in df.columns: rename_map['FTAG'] = 'away_goals'
-    elif 'AG' in df.columns and 'away_goals' not in df.columns: rename_map['AG'] = 'away_goals'
-    
-    # 3. Статистика (если есть)
-    stat_mappings = {
-        'HS': 'home_shots', 'AS': 'away_shots',
-        'HST': 'home_shots_on_target', 'AST': 'away_shots_on_target',
-        'HC': 'home_corners', 'AC': 'away_corners',
-        'HY': 'home_yellows', 'AY': 'away_yellows',
-        'HF': 'home_fouls', 'AF': 'away_fouls',
-        'HTHG': 'ht_home_goals', 'HTAG': 'ht_away_goals',
-        'HTR': 'ht_result'
-    }
-    for src, dst in stat_mappings.items():
-        if src in df.columns and dst not in df.columns:
-            rename_map[src] = dst
-            
-    if rename_map:
-        df = df.rename(columns=rename_map)
-        logger.info(f"   ↳ Переименованы колонки: {list(rename_map.values())}")
-
-    # 🔥 КРИТИЧЕСКАЯ ПРОВЕРКА
-    if 'home_team' not in df.columns or 'away_team' not in df.columns:
-        logger.error(f"❌ Ошибка в {os.path.basename(data_path)}: не найдены 'home_team' или 'away_team'.")
-        logger.error(f"   Реальные колонки в файле: {list(df.columns)}")
-        return None
-    
-    df['home_goals'] = safe_convert_goals(df.get('home_goals', 0))
-    df['away_goals'] = safe_convert_goals(df.get('away_goals', 0))
-    df = df[(df['home_goals'] <= 15) & (df['away_goals'] <= 15)]
-    
-    df = assign_football_season(df)
-    logger.info(f"✅ Загружено {len(df)} матчей. Доступные сезоны: {df['season'].unique().tolist()}")
-    return df
-
-
-def calculate_rest_days(df: pd.DataFrame) -> pd.DataFrame:
-    """Расчёт дней отдыха между матчами"""
-    df = df.sort_values('date').copy()
-    df['home_rest_days'] = 7
-    df['away_rest_days'] = 7
-    
-    # Безопасная проверка перед доступом к колонкам
-    if 'home_team' not in df.columns or 'away_team' not in df.columns:
-        logger.warning("⚠️ Пропуск расчета дней отдыха: нет колонок home_team/away_team")
-        return df
-        
-    all_teams = set(df['home_team'].dropna()) | set(df['away_team'].dropna())
-    
-    for team in all_teams:
-        team_matches = df[
-            (df['home_team'] == team) | (df['away_team'] == team)
-        ].sort_values('date')
-        
-        if len(team_matches) < 2:
-            continue
-        
-        prev_date = None
-        for idx in team_matches.index:
-            if prev_date is not None:
-                rest_days = (team_matches.loc[idx, 'date'] - prev_date).days
-                if team_matches.loc[idx, 'home_team'] == team:
-                    df.loc[idx, 'home_rest_days'] = rest_days
-                else:
-                    df.loc[idx, 'away_rest_days'] = rest_days
-            prev_date = team_matches.loc[idx, 'date']
-    
-    logger.info("✅ Дни отдыха рассчитаны")
     return df
 
 def find_similar_team(team_name: str, all_teams: List[str], threshold: float = 0.65) -> Optional[str]:
@@ -349,11 +245,35 @@ def calculate_team_metrics(df: pd.DataFrame, team_name: str, current_date: datet
     if 'ht_home_goals' in team_matches.columns:
         ht_goals = np.where(home_mask, team_matches['ht_home_goals'].values, team_matches['ht_away_goals'].values)
         metrics['avg_ht_goals'] = float(np.mean(ht_goals)) if len(ht_goals) > 0 else 0.5
-        
-        ht_btts = sum(1 for _, m in team_matches.iterrows() if m.get('ht_home_goals', 0) > 0 and m.get('ht_away_goals', 0) > 0)
-        metrics['ht_btts_pct'] = ht_btts / len(team_matches) if len(team_matches) > 0 else 0.3
+    
+        # ✅ ПРАВИЛЬНЫЙ подсчёт BTTS в 1-м тайме (через векторные операции)
+        if 'ht_away_goals' in team_matches.columns:
+            ht_btts = int(((team_matches['ht_home_goals'] > 0) & (team_matches['ht_away_goals'] > 0)).sum())
+            metrics['ht_btts_pct'] = ht_btts / len(team_matches) if len(team_matches) > 0 else 0.3
+        else:
+            metrics['ht_btts_pct'] = 0.3
 
     metrics['avg_xG'] = float(metrics.get('avg_shots', 10.0) * 0.12)
+
+        # --- НОВЫЕ ФИЧИ: раздельная сила дома/в гостях и ничейность ---
+    hm = team_matches[team_matches['home_team'] == team_name]
+    am = team_matches[team_matches['away_team'] == team_name]
+    if len(hm) > 0:
+        pts = np.where(hm['home_goals'] > hm['away_goals'], 3,
+                       np.where(hm['home_goals'] == hm['away_goals'], 1, 0))
+        metrics['home_ppg'] = float(pts.mean())
+    else:
+        metrics['home_ppg'] = 1.4
+    if len(am) > 0:
+        pts = np.where(am['away_goals'] > am['home_goals'], 3,
+                       np.where(am['away_goals'] == am['home_goals'], 1, 0))
+        metrics['away_ppg'] = float(pts.mean())
+    else:
+        metrics['away_ppg'] = 1.1
+    metrics['draw_rate'] = float(
+        (team_matches['home_goals'] == team_matches['away_goals']).mean()
+    ) if len(team_matches) > 0 else 0.25
+
     return metrics
 
 def prepare_features_for_match(home_metrics: Dict, away_metrics: Dict, home_rating: float, away_rating: float) -> np.ndarray:
@@ -373,7 +293,11 @@ def prepare_features_for_match(home_metrics: Dict, away_metrics: Dict, home_rati
         float(home_metrics.get('avg_corners', 4.5)), float(away_metrics.get('avg_corners', 4.5)),
         float(home_metrics.get('avg_corners', 4.5) + away_metrics.get('avg_corners', 4.5)),  # Суммарные угловые
         float(home_metrics.get('avg_yellows', 2.0)), float(away_metrics.get('avg_yellows', 2.0)),
-        float(home_metrics.get('avg_yellows', 2.0) + away_metrics.get('avg_yellows', 2.0))   # Суммарные карточки
+        float(home_metrics.get('avg_yellows', 2.0) + away_metrics.get('avg_yellows', 2.0)),  # Суммарные карточки
+        float(home_metrics.get('home_ppg', 1.4)),
+        float(away_metrics.get('away_ppg', 1.1)),
+        float(home_metrics.get('draw_rate', 0.25)),
+        float(away_metrics.get('draw_rate', 0.25)),
     ]
     return np.array(features).reshape(1, -1)
 
@@ -425,59 +349,75 @@ def train_models(df: pd.DataFrame) -> Optional[Dict]:
     scaler = StandardScaler()
     scaler.fit(X[:train_size])
     X_scaled = scaler.transform(X)
-    
+    cal_method = 'isotonic' if len(X_scaled) >= 2000 else 'sigmoid'
+
+    # --- УЛУЧШЕНИЕ 1: свежие матчи важнее старых ---
+    dates = pd.to_datetime(df_with_ratings['date'])
+    age_days = (dates.max() - dates).dt.days.values
+    sample_weights = np.exp(-age_days / 900.0)      # период полураспада ~2.5 года
+    sample_weights = sample_weights / sample_weights.mean()
+
+    # --- УЛУЧШЕНИЕ 2: адаптивная калибровка по объёму данных ---
+    cal_method = 'isotonic' if len(X_scaled) >= 3000 else 'sigmoid'
+
+    base_rates = np.array([
+        (y_result == 0).mean(),   # П2
+        (y_result == 1).mean(),   # ничья
+        (y_result == 2).mean(),   # П1
+    ])
+
     models = {}
     tscv = TimeSeriesSplit(n_splits=5)
     
     # 1. Исход
     logger.info("🎯 Обучение модели исхода...")
-    models['result'] = CalibratedClassifierCV(XGBClassifier(n_estimators=100, max_depth=4, learning_rate=0.08, objective='multi:softprob', num_class=3, random_state=42), method='isotonic', cv=tscv)
-    models['result'].fit(X_scaled, y_result)
+    models['result'] = CalibratedClassifierCV(XGBClassifier(n_estimators=100, max_depth=4, learning_rate=0.08, objective='multi:softprob', num_class=3, random_state=42), method=cal_method, cv=tscv)
+    models['result'].fit(X_scaled, y_result, sample_weight=sample_weights)
     
     # 2. Тотал 2.5
     logger.info("⚽ Обучение модели тотала...")
-    models['total'] = CalibratedClassifierCV(XGBClassifier(n_estimators=100, max_depth=4, learning_rate=0.08, objective='binary:logistic', random_state=42), method='isotonic', cv=tscv)
-    models['total'].fit(X_scaled, y_total)
+    models['total'] = CalibratedClassifierCV(XGBClassifier(n_estimators=100, max_depth=4, learning_rate=0.08, objective='binary:logistic', random_state=42), method=cal_method, cv=tscv)
+    models['total'].fit(X_scaled, y_total, sample_weight=sample_weights)
     
     # 3. ОЗ
     logger.info("🔄 Обучение модели BTTS...")
-    models['btts'] = CalibratedClassifierCV(XGBClassifier(n_estimators=100, max_depth=4, learning_rate=0.08, objective='binary:logistic', random_state=42), method='isotonic', cv=tscv)
-    models['btts'].fit(X_scaled, y_btts)
+    models['btts'] = CalibratedClassifierCV(XGBClassifier(n_estimators=100, max_depth=4, learning_rate=0.08, objective='binary:logistic', random_state=42), method=cal_method, cv=tscv)
+    models['btts'].fit(X_scaled, y_btts, sample_weight=sample_weights)
     
     # 🔥 4. Исход 1-го тайма
     if 'ht_result' in df.columns:
         logger.info("⏱️ Обучение модели исхода 1-го тайма...")
         y_ht = df_with_ratings['ht_result'].map({'H': 2, 'D': 1, 'A': 0}).fillna(1).astype(int).values
-        models['ht_result'] = CalibratedClassifierCV(XGBClassifier(n_estimators=80, max_depth=3, learning_rate=0.1, objective='multi:softprob', num_class=3, random_state=42), method='isotonic', cv=tscv)
-        models['ht_result'].fit(X_scaled, y_ht)
+        models['ht_result'] = CalibratedClassifierCV(XGBClassifier(n_estimators=80, max_depth=3, learning_rate=0.1, objective='multi:softprob', num_class=3, random_state=42), method=cal_method, cv=tscv)
+        models['ht_result'].fit(X_scaled, y_ht, sample_weight=sample_weights)
     
     # 🔥 5. Тотал ударов
     if 'home_shots' in df.columns:
         logger.info("🎯 Обучение модели тотала ударов...")
         y_shots = ((df_with_ratings['home_shots'] + df_with_ratings['away_shots']) > 22.5).astype(int).values
         models['shots_over_22_5'] = CalibratedClassifierCV(XGBClassifier(n_estimators=80, max_depth=3, learning_rate=0.1, random_state=42), method='sigmoid', cv=tscv)
-        models['shots_over_22_5'].fit(X_scaled, y_shots)
+        models['shots_over_22_5'].fit(X_scaled, y_shots, sample_weight=sample_weights)
     
     # 🔥 6. Тотал ударов в створ
     if 'home_shots_on_target' in df.columns:
         logger.info("🎯 Обучение модели тотала ударов в створ...")
         y_sot = ((df_with_ratings['home_shots_on_target'] + df_with_ratings['away_shots_on_target']) > 8.5).astype(int).values
         models['sot_over_8_5'] = CalibratedClassifierCV(XGBClassifier(n_estimators=80, max_depth=3, learning_rate=0.1, random_state=42), method='sigmoid', cv=tscv)
-        models['sot_over_8_5'].fit(X_scaled, y_sot)
+        models['sot_over_8_5'].fit(X_scaled, y_sot, sample_weight=sample_weights)
     
     # 🔥 7. Тотал фолов
     if 'home_fouls' in df.columns:
         logger.info("🟨 Обучение модели тотала фолов...")
         y_fouls = ((df_with_ratings['home_fouls'] + df_with_ratings['away_fouls']) > 23.5).astype(int).values
         models['fouls_over_23_5'] = CalibratedClassifierCV(XGBClassifier(n_estimators=80, max_depth=3, learning_rate=0.1, random_state=42), method='sigmoid', cv=tscv)
-        models['fouls_over_23_5'].fit(X_scaled, y_fouls)
+        models['fouls_over_23_5'].fit(X_scaled, y_fouls, sample_weight=sample_weights)
     
     # 🔥 8. ОЗ в 1-м тайме
     if 'ht_home_goals' in df.columns:
         logger.info("🔄 Обучение модели BTTS 1-го тайма...")
         y_btts_ht = ((df_with_ratings['ht_home_goals'] > 0) & (df_with_ratings['ht_away_goals'] > 0)).astype(int).values
         models['btts_ht'] = CalibratedClassifierCV(XGBClassifier(n_estimators=80, max_depth=3, learning_rate=0.1, random_state=42), method='sigmoid', cv=tscv)
-        models['btts_ht'].fit(X_scaled, y_btts_ht)
+        models['btts_ht'].fit(X_scaled, y_btts_ht, sample_weight=sample_weights)
 
     if 'home_corners' in df.columns and 'away_corners' in df.columns:
         logger.info("🎯 Обучение модели угловых (ТБ 9.5)...")
@@ -487,7 +427,7 @@ def train_models(df: pd.DataFrame) -> Optional[Dict]:
             XGBClassifier(n_estimators=80, max_depth=3, learning_rate=0.1, random_state=42),
             method='sigmoid', cv=tscv
         )
-        models['corners_over_9_5'].fit(X_scaled, y_corners_95)
+        models['corners_over_9_5'].fit(X_scaled, y_corners_95, sample_weight=sample_weights)
         
         # 🔥 10. УГЛОВЫЕ: Тотал больше 10.5
         logger.info("🎯 Обучение модели угловых (ТБ 10.5)...")
@@ -496,7 +436,7 @@ def train_models(df: pd.DataFrame) -> Optional[Dict]:
             XGBClassifier(n_estimators=80, max_depth=3, learning_rate=0.1, random_state=42),
             method='sigmoid', cv=tscv
         )
-        models['corners_over_10_5'].fit(X_scaled, y_corners_105)
+        models['corners_over_10_5'].fit(X_scaled, y_corners_105, sample_weight=sample_weights)
     else:
         logger.warning("⚠️ Колонки угловых отсутствуют, пропускаем обучение corners-моделей")
     
@@ -509,7 +449,7 @@ def train_models(df: pd.DataFrame) -> Optional[Dict]:
             XGBClassifier(n_estimators=80, max_depth=3, learning_rate=0.1, random_state=42),
             method='sigmoid', cv=tscv
         )
-        models['yellows_over_3_5'].fit(X_scaled, y_yellows_35)
+        models['yellows_over_3_5'].fit(X_scaled, y_yellows_35, sample_weight=sample_weights)
         
         # 🔥 12. КАРТОЧКИ: Тотал больше 4.5
         logger.info("🟨 Обучение модели карточек (ТБ 4.5)...")
@@ -518,16 +458,16 @@ def train_models(df: pd.DataFrame) -> Optional[Dict]:
             XGBClassifier(n_estimators=80, max_depth=3, learning_rate=0.1, random_state=42),
             method='sigmoid', cv=tscv
         )
-        models['yellows_over_4_5'].fit(X_scaled, y_yellows_45)
+        models['yellows_over_4_5'].fit(X_scaled, y_yellows_45, sample_weight=sample_weights)
     else:
         logger.warning("⚠️ Колонки карточек отсутствуют, пропускаем обучение cards-моделей")
     
     logger.info(f"✅ Обучение завершено! Моделей: {len(models)}")
-    logger.info(f"✅ Обучение завершено! Моделей: {len(models)}")
     return {
         'models': models, 'le_home': le_home, 'le_away': le_away, 'scaler': scaler,
         'feature_names': feature_names, 'n_matches': len(df), 'final_ratings': final_ratings,
-        'training_date': datetime.now().isoformat(), 'version': '2.2'
+        'base_rates': base_rates,
+        'training_date': datetime.now().isoformat(), 'version': '2.3'
     }
 
 # ==================== ПРОГНОЗИРОВАНИЕ ====================
@@ -535,10 +475,9 @@ def get_trust_signal(prediction: dict) -> str:
     if "error" in prediction or 'result' not in prediction: return "❓ Нет данных"
     probs = prediction['result']
     max_prob = max(probs.values())
-    trust_score = max_prob * 0.6 + 0.4 # Упрощенная формула для стабильности
-    if trust_score >= 0.80: return "💎 АЛМАЗНЫЙ | Максимальная уверенность"
-    elif trust_score >= 0.70: return "🥇 ЗОЛОТОЙ | Высокая уверенность"
-    elif trust_score >= 0.60: return "🥈 СЕРЕБРЯНЫЙ | Средняя уверенность"
+    if max_prob >= 0.55: return "💎 АЛМАЗНЫЙ | Максимальная уверенность"
+    elif max_prob >= 0.48: return "🥇 ЗОЛОТОЙ | Высокая уверенность"
+    elif max_prob >= 0.42: return "🥈 СЕРЕБРЯНЫЙ | Средняя уверенность"
     return "🥉 БРОНЗОВЫЙ | Низкая уверенность"
 
 def predict_match(team1: str, team2: str, model_data: dict, ratings_dict: dict = None, all_matches_df: pd.DataFrame = None, risk_level: str = RISK_MEDIUM) -> dict:
@@ -573,18 +512,25 @@ def predict_match(team1: str, team2: str, model_data: dict, ratings_dict: dict =
         # Основной исход
         if 'result' in models:
             probs = models['result'].predict_proba(features_scaled)[0]
+
+        # Сжатие переоцененных вероятностей к реальным частотам лиги
+            base = model_data.get('base_rates')
+            if base is not None:
+                raw = np.array([probs[0], probs[1], probs[2]])   # [П2, Х, П1]
+                adj = 0.8 * raw + 0.2 * base
+                adj = adj / adj.sum()
+                probs = adj
+
             prediction['result'] = {HOME_WIN: float(probs[2]), DRAW: float(probs[1]), AWAY_WIN: float(probs[0])}
-        
-        # Тотал 2.5
-        if 'total' in models:
-            prob = models['total'].predict_proba(features_scaled)[0][1]
-            prediction['total_goals'] = {OVER_25: float(prob), UNDER_25: float(1 - prob)}
-        
-        # ОЗ
-        if 'btts' in models:
-            prob = models['btts'].predict_proba(features_scaled)[0][1]
-            prediction['both_scored'] = {BTTS_YES: float(prob), BTTS_NO: float(1 - prob)}
-            
+
+        goals = predict_goals_markets(models, features_scaled, home_metrics, away_metrics)
+        if 'total' in goals:
+            prediction['total_goals'] = {OVER_25: float(goals['total']), UNDER_25: float(1 - goals['total'])}
+
+        if 'btts' in goals:
+            prediction['both_scored'] = {BTTS_YES: float(goals['btts']), BTTS_NO: float(1 - goals['btts'])}
+
+
         # 🔥 НОВЫЕ РЫНКИ
         if 'ht_result' in models:
             probs = models['ht_result'].predict_proba(features_scaled)[0]
@@ -664,34 +610,65 @@ def predict_match(team1: str, team2: str, model_data: dict, ratings_dict: dict =
         prediction['trust_signal'] = get_trust_signal(prediction)
 
         # 🔥 УМНЫЙ ПОИСК САМОЙ УВЕРЕННОЙ СТАВКИ
+        market_to_tier = {}
+        for tier, markets in MARKET_TIERS.items():
+            for m in markets:
+                market_to_tier[m] = tier
+
+        bet_markets = {
+            'result':            {'Home Win': f'П1 ({team1})', 'Draw': 'Ничья', 'Away Win': f'П2 ({team2})'},
+            'total_goals':       {'Over 2.5': 'ТБ 2.5', 'Under 2.5': 'ТМ 2.5'},
+            'both_scored':       {'Yes': 'ОЗ - Да', 'No': 'ОЗ - Нет'},
+            'first_half_result': {'Home Win': f'1Т П1 ({team1})', 'Draw': '1Т Ничья', 'Away Win': f'1Т П2 ({team2})'},
+            'btts_first_half':   {'Yes': 'ОЗ 1Т - Да', 'No': 'ОЗ 1Т - Нет'},
+            'total_shots':       {'Over 22.5': 'Удары ТБ 22.5', 'Under 22.5': 'Удары ТМ 22.5'},
+            'total_shots_on_target': {'Over 8.5': 'Удары в створ ТБ 8.5', 'Under 8.5': 'Удары в створ ТМ 8.5'},
+            'total_fouls':       {'Over 23.5': 'Фолы ТБ 23.5', 'Under 23.5': 'Фолы ТМ 23.5'},
+            'corners_over_9_5':  {'Over 9.5': 'Угловые ТБ 9.5'},
+            'corners_over_10_5': {'Over 10.5': 'Угловые ТБ 10.5'},
+            'yellows_over_3_5':  {'Over 3.5': 'Карточки ТБ 3.5'},
+            'yellows_over_4_5':  {'Over 4.5': 'Карточки ТБ 4.5'},
+        }
+    
+            
         best_bet_name = "П1/П2"
         best_bet_prob = 0.0
-
-        # Рынки для анализа (ключ -> человекочитаемое название)
-        bet_markets = {
-            'result': {'Home Win': f'П1 ({team1})', 'Draw': 'Ничья', 'Away Win': f'П2 ({team2})'},
-            'total_goals': {'Over 2.5': 'ТБ 2.5', 'Under 2.5': 'ТМ 2.5'},
-            'both_scored': {'Yes': 'ОЗ - Да', 'No': 'ОЗ - Нет'},
-        }
+        best_bet_tier = None
 
         for market_key, labels in bet_markets.items():
-            if market_key in prediction and isinstance(prediction[market_key], dict):
-                for outcome_key, label in labels.items():
-                    if outcome_key in prediction[market_key]:
-                        prob = prediction[market_key][outcome_key]
-                        if prob > best_bet_prob:
-                            best_bet_prob = prob
-                            best_bet_name = label
+            tier = market_to_tier.get(market_key, 'C')
+
+            if tier == 'C':
+                continue
+
+            if market_key not in prediction:
+                continue
+
+            market_data = prediction[market_key]
+            if not isinstance(market_data, dict):
+                continue
+
+            for outcome_key, label in labels.items():
+                if outcome_key in market_data:
+                    prob = market_data[outcome_key]
+                    # Обновляем лучшую ставку только если уверенность выше порога
+                    if prob > best_bet_prob and prob >= CONF_THRESHOLD:
+                        best_bet_prob = prob
+                        best_bet_name = label
+                        best_bet_tier = tier
 
         # Гибкий критерий "горячести": высокая вероятность ИЛИ большой разрыв
         result_probs = prediction.get('result', {HOME_WIN: 0.33, DRAW: 0.34, AWAY_WIN: 0.33}).values()
         sorted_probs = sorted(result_probs, reverse=True)
         gap = sorted_probs[0] - sorted_probs[1] if len(sorted_probs) > 1 else 0
-        prediction['is_hot'] = best_bet_prob > 0.60 or (best_bet_prob > 0.50 and gap > 0.20)
+
+        prediction['is_hot'] = best_bet_prob > 0.55 or (best_bet_prob > 0.50 and gap > 0.15)
         prediction['hot_confidence'] = round(best_bet_prob * 100, 1)
         prediction['hot_bet'] = f"{best_bet_name} ({round(best_bet_prob*100)}%)"
-        
+        prediction['hot_bet_tier'] = best_bet_tier  # 🆕 отдаём тир во фронт
+
         return prediction
+    
     except Exception as e:
         logger.error(f"❌ Ошибка в predict_match: {e}")
         return {"error": f"Внутренняя ошибка: {str(e)[:100]}"}
@@ -701,10 +678,10 @@ def predict_match(team1: str, team2: str, model_data: dict, ratings_dict: dict =
 def save_model(model_data: dict, filepath: str) -> bool:
     try:
         # 🔥 ПРИНУДИТЕЛЬНО устанавливаем версию 2.2
-        model_data['version'] = '2.2'
+        model_data['version'] = '2.3'
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         joblib.dump(model_data, filepath)
-        logger.info(f"✅ Модель сохранена: {filepath} (v2.2)")
+        logger.info(f"✅ Модель сохранена: {filepath} (v2.3)")
         return True
     except Exception as e:
         logger.error(f"❌ Ошибка сохранения: {e}")
@@ -716,13 +693,13 @@ def load_model(filepath: str) -> Optional[dict]:
     try:
         model_data = joblib.load(filepath)
         
-        # 🔥 АГРЕССИВНАЯ ПРОВЕРКА: Если это НЕ версия 2.2, мы БЕЗЖАЛОСТНО удаляем файл!
-        if model_data.get('version') != '2.2':
+        # 🔥 АГРЕССИВНАЯ ПРОВЕРКА: Если это НЕ версия 2.3, мы БЕЗЖАЛОСТНО удаляем файл!
+        if model_data.get('version') != '2.3':
             logger.warning(f"⚠️ НАЙДЕНА СТАРАЯ МОДЕЛЬ (v{model_data.get('version')})! Удаляем {filepath} для переобучения...")
             os.remove(filepath)
             return None
             
-        logger.info(f"✅ Модель загружена: {filepath} (v2.2)")
+        logger.info(f"✅ Модель загружена: {filepath} (v2.3)")
         return model_data
     except Exception as e:
         logger.error(f"❌ Ошибка загрузки {filepath}: {e}. Удаляем битый файл.")
@@ -782,18 +759,26 @@ def load_matches_data(data_path: str) -> Optional[pd.DataFrame]:
     
     # 2. Маппинг колонок
     rename_map = {}
-    if 'HomeTeam' in df.columns: rename_map['HomeTeam'] = 'home_team'
-    elif 'Home' in df.columns: rename_map['Home'] = 'home_team'
+    if 'HomeTeam' in df.columns and 'home_team' not in df.columns:
+            rename_map['HomeTeam'] = 'home_team'
+    elif 'Home' in df.columns and 'home_team' not in df.columns: 
+        rename_map['Home'] = 'home_team' 
+
+    if 'AwayTeam' in df.columns and 'away_team' not in df.columns: 
+        rename_map['AwayTeam'] = 'away_team'
+    elif 'Away' in df.columns and 'away_team' not in df.columns: 
+        rename_map['Away'] = 'away_team'
     
-    if 'AwayTeam' in df.columns: rename_map['AwayTeam'] = 'away_team'
-    elif 'Away' in df.columns: rename_map['Away'] = 'away_team'
-    
-    if 'FTHG' in df.columns: rename_map['FTHG'] = 'home_goals'
-    elif 'HG' in df.columns: rename_map['HG'] = 'home_goals'
-    
-    if 'FTAG' in df.columns: rename_map['FTAG'] = 'away_goals'
-    elif 'AG' in df.columns: rename_map['AG'] = 'away_goals'
-    
+    if 'FTHG' in df.columns and 'home_goals' not in df.columns: 
+        rename_map['FTHG'] = 'home_goals'
+    elif 'HG' in df.columns and 'home_goals' not in df.columns: 
+        rename_map['HG'] = 'home_goals'
+
+    if 'FTAG' in df.columns and 'away_goals' not in df.columns: 
+        rename_map['FTAG'] = 'away_goals'
+    elif 'AG' in df.columns and 'away_goals' not in df.columns: 
+        rename_map['AG'] = 'away_goals'
+
     stat_mappings = {
         'HS': 'home_shots', 'AS': 'away_shots',
         'HST': 'home_shots_on_target', 'AST': 'away_shots_on_target',
@@ -809,6 +794,7 @@ def load_matches_data(data_path: str) -> Optional[pd.DataFrame]:
             
     if rename_map:
         df = df.rename(columns=rename_map)
+        logger.info(f"   ↳ Переименованы колонки: {list(rename_map.values())}")
 
     # 3. Критическая проверка
     if 'home_team' not in df.columns or 'away_team' not in df.columns:
@@ -816,18 +802,21 @@ def load_matches_data(data_path: str) -> Optional[pd.DataFrame]:
         return None
     
     # 4. Безопасная конвертация голов
-    df['home_goals'] = safe_convert_goals(df.get('home_goals', pd.Series([0]*len(df))))
-    df['away_goals'] = safe_convert_goals(df.get('away_goals', pd.Series([0]*len(df))))
-    df = df[(df['home_goals'] <= 15) & (df['away_goals'] <= 15)]
-    
-    # 5. Расчёт дней отдыха (в блоке try-except, чтобы не ронять весь сервер)
+# Гарантируем наличие колонок ПЕРЕД обработкой
+    if 'home_goals' not in df.columns:
+        df['home_goals'] = 0
+    if 'away_goals' not in df.columns:
+        df['away_goals'] = 0
+
+    df['home_goals'] = safe_convert_goals(df['home_goals'])
+    df['away_goals'] = safe_convert_goals(df['away_goals'])
+    # Дни отдыха (try/except, чтобы не ронять загрузку)
     try:
         df = calculate_rest_days(df)
     except Exception as e:
-        logger.warning(f"⚠️ Ошибка расчёта дней отдыха в {os.path.basename(data_path)}: {e}. Пропускаем этот шаг.")
+        logger.warning(f"⚠️ Не удалось посчитать дни отдыха: {e}")
         df['home_rest_days'] = 7
         df['away_rest_days'] = 7
-    
     df = assign_football_season(df)
     logger.info(f"✅ Загружено {len(df)} матчей. Сезоны: {df['season'].unique().tolist()}")
     return df
@@ -840,6 +829,7 @@ def calculate_rest_days(df: pd.DataFrame) -> pd.DataFrame:
     df['away_rest_days'] = 7
     
     if 'home_team' not in df.columns or 'away_team' not in df.columns:
+        logger.warning("⚠️ Пропуск расчёта дней отдыха: нет колонок home_team/away_team")
         return df
         
     all_teams = set(df['home_team'].dropna()) | set(df['away_team'].dropna())
@@ -862,6 +852,7 @@ def calculate_rest_days(df: pd.DataFrame) -> pd.DataFrame:
                     df.loc[idx, 'away_rest_days'] = rest_days
             prev_date = team_matches.loc[idx, 'date']
     
+    logger.info("✅ Дни отдыха рассчитаны")
     return df
 
 def calculate_team_statistics(df: pd.DataFrame, team_name: str, max_matches: int = 50, season_start_date: Optional[str] = None) -> Dict:
