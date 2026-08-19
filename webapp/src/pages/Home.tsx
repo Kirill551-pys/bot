@@ -5,11 +5,13 @@ import { Link } from 'react-router-dom';
 
 export function Home() {
   const { user, hapticFeedback } = useTelegram();
-  const { data: hot, isLoading } = useQuery({
+  const { data: hot, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['hot-prediction'],
     queryFn: () => api.getHotPrediction(),
     refetchInterval: 60_000,
-    retry: 0,
+    retry: 3,  // 3 попытки
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000), // 1с, 2с, 4с, макс 10с
+    staleTime: 5 * 60 * 1000, // кэш на 5 минут
   });
 
   const confidence = Math.round(hot?.hot_confidence ?? 0);
@@ -178,10 +180,9 @@ export function Home() {
       {/* ===== Преимущества ===== */}
       <section className="card animate-fade-up delay-3 space-y-4">
         <h3 className="font-extrabold text-[15px] text-white">Почему нам доверяют</h3>
-        <Benefit icon="🤖" text="Модель v2.2: 12 рынков, включая угловые и карточки" />
+        <Benefit icon="🤖" text="Модель v2.3: 12 рынков, включая угловые и карточки" />
         <Benefit icon="📈" text="ELO-рейтинги и форма команд в реальном времени" />
-        <Benefit icon="🛡️" text="Уровень доверия к каждому прогнозу" />
-        <Benefit icon="⚡" text="Мгновенные прогнозы без ожидания" />
+        <Benefit icon="⚡" text="Мгновенная статистика без ожидания" />
       </section>
 
       {/* ===== CTA подписка ===== */}

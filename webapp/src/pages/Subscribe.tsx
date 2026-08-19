@@ -25,10 +25,8 @@ export function Subscribe() {
   });
 
   const tariffs = [
-    { key: 'weekly', name: 'Неделя', price: 149, days: 7, icon: '📅', perDay: 21 },
-    { key: 'monthly', name: 'Месяц', price: 399, days: 30, icon: '📆', popular: true, perDay: 13 },
-    { key: 'quarter', name: 'Квартал', price: 999, days: 90, icon: '🗓️', perDay: 11 },
-    { key: 'lifetime', name: 'Навсегда', price: 3990, days: 3650, icon: '♾️', perDay: 1 },
+    { key: 'monthly', name: 'Месяц', price: 499, days: 30, icon: '📆', popular: true, perDay: 13 },
+    { key: 'quarter', name: 'Квартал', price: 1399, days: 90, icon: '🗓️', perDay: 11 },
   ];
 
   const handlePayment = (tariffKey: string) => {
@@ -126,7 +124,20 @@ export function Subscribe() {
                 <p className="text-[11px] text-[#8b9baa]">≈{tariff.perDay}₽/день</p>
               </div>
             </div>
-
+            <label className="flex items-start gap-2 mt-4 cursor-pointer">
+              <input 
+                type="checkbox" 
+                required
+                className="mt-1"
+              />
+              <span className="text-[12px] text-[#8b9baa] leading-snug">
+                Я согласен с{' '}
+                <a href="/privacy" target="_blank" className="text-blue-400 underline">
+                  политикой конфиденциальности
+                </a>
+                {' '}и даю согласие на обработку персональных данных
+              </span>
+            </label>
             <button
               onClick={() => handlePayment(tariff.key)}
               className={`w-full py-3 rounded-xl font-bold text-[14px] transition-all active:scale-[.96] ${
@@ -145,21 +156,11 @@ export function Subscribe() {
       <div className="card animate-fade-up delay-4">
         <h2 className="font-extrabold text-[15px] text-white mb-4">✨ Что даёт подписка</h2>
         <div className="space-y-3.5">
-          <Perk icon="✅" text="Безлимитные прогнозы на любые матчи" />
-          <Perk icon="🔥" text="Горячие прогнозы с высокой уверенностью" />
+          <Perk icon="✅" text="Статистика на любые матчи" />
+          <Perk icon="🔥" text="Статические преимущества" />
           <Perk icon="📊" text="Расширенная статистика по всем лигам" />
-          <Perk icon="🎯" text="Прогнозы на угловые, карточки, удары" />
-          <Perk icon="⚡" text="Приоритетная обработка запросов" />
-          <Perk icon="👥" text="Приоритетная поддержка 24/7" />
+          <Perk icon="🎯" text="Статистика на угловые, карточки, удары" />
         </div>
-      </div>
-
-      {/* ===== Гарантия ===== */}
-      <div className="text-center animate-fade-up delay-5">
-        <p className="text-[12px] text-[#8b9baa] leading-relaxed">
-          🛡️ Гарантия возврата в течение 24 часов,<br />
-          если сервис не оправдал ожиданий
-        </p>
       </div>
     </div>
   );

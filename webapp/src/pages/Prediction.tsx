@@ -242,7 +242,7 @@ export function Prediction() {
               {prediction.away_team}
             </h2>
             <p className="text-[11px] sm:text-[12px] text-[#8b9baa] mt-2 flex items-center justify-center gap-1.5 flex-wrap">
-              <span className="badge badge-blue">🤖 AI v2.2</span>
+              <span className="badge badge-blue">🤖 AI v2.3</span>
               {prediction.is_hot && (
                 <span className="badge badge-gold animate-live">🔥 HOT</span>
               )}
