@@ -9,8 +9,10 @@ import os
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters.command import Command
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
+from database import get_all_users_count, get_active_subscriptions_count, get_trials_count, get_payments_count
 
-from config import BOT_TOKEN
+from config import BOT_TOKEN, ADMIN_ID, CHANNEL_USERNAME
+
 
 # Настройка логирования
 logging.basicConfig(
@@ -41,6 +43,28 @@ def get_main_menu():
     )
 
 # ==================== ОБРАБОТЧИКИ ====================
+
+@dp.message(Command("stats"))
+async def cmd_stats(message: types.Message):
+    """Статистика бота (только для администратора)"""
+    if message.from_user.id != ADMIN_ID:
+        await message.answer("⛔ Доступ запрещён")
+        return
+    
+    users = get_all_users_count()
+    active_subs = get_active_subscriptions_count()
+    trials = get_trials_count()
+    payments = get_payments_count()
+    
+    await message.answer(
+        f"📊 <b>Статистика бота</b>\n\n"
+        f"👥 Всего пользователей: <b>{users}</b>\n"
+        f"💎 Активных подписок: <b>{active_subs}</b>\n"
+        f"🎁 Использовано trial: <b>{trials}</b>\n"
+        f"💰 Платежей: <b>{payments}</b>",
+        parse_mode="HTML"
+    )
+
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     await message.answer(
@@ -55,6 +79,23 @@ async def cmd_start(message: types.Message):
         parse_mode="HTML"
         # Отключаем удаление клавиатуры, чтобы кнопка всегда была под рукой
     )
+
+
+@dp.message(Command("channel_stats"))
+async def cmd_channel_stats(message: types.Message):
+    """Количество подписчиков канала"""
+    if message.from_user.id != ADMIN_ID:
+        await message.answer("⛔ Доступ запрещён")
+        return
+    
+    try:
+        member_count = await bot.get_chat_member_count(CHANNEL_USERNAME)
+        await message.answer(
+            f"📢 Подписчиков в канале <b>{CHANNEL_USERNAME}</b>: <b>{member_count}</b>",
+            parse_mode="HTML"
+        )
+    except Exception as e:
+        await message.answer(f"❌ Ошибка: {e}")
 
 @dp.message(Command("help"))
 @dp.message(F.text == "❓ Помощь /help")

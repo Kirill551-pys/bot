@@ -11,9 +11,17 @@ logger = logging.getLogger(__name__)
 # Загрузка переменных из .env
 load_dotenv()
 
+
+# ==================== АДМИНИСТРАТОРЫ ====================
+# Загружаем список ID из .env через запятую
+_admin_ids_str = os.getenv("ADMIN_IDS", "")
+ADMIN_IDS = set(map(int, _admin_ids_str.split(","))) if _admin_ids_str else set()
+
 # ==================== ОБЯЗАТЕЛЬНЫЕ ПЕРЕМЕННЫЕ ====================
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHANNEL_USERNAME = os.getenv("CHANNEL_USERNAME")
+
+ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))      
 
 if not BOT_TOKEN:
     raise RuntimeError("❌ Не задан BOT_TOKEN в переменных окружения!")

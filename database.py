@@ -61,6 +61,42 @@ def init_db():
             ''')
         logger.info("✅ База данных инициализирована")
 
+def get_all_users_count() -> int:
+    """Общее количество пользователей в базе"""
+    with _get_connection() as conn:
+        row = conn.execute('SELECT COUNT(*) FROM subscribers').fetchone()
+        return row[0] if row else 0
+
+
+def get_active_subscriptions_count() -> int:
+    """Количество активных платных подписок"""
+    with _get_connection() as conn:
+        row = conn.execute('''
+            SELECT COUNT(*) FROM subscribers 
+            WHERE is_active = 1 
+            AND subscription_type NOT IN ('free', 'trial')
+            AND subscription_end > datetime('now')
+        ''').fetchone()
+        return row[0] if row else 0
+
+
+def get_trials_count() -> int:
+    """Количество использованных trial"""
+    with _get_connection() as conn:
+        row = conn.execute(
+            'SELECT COUNT(*) FROM subscribers WHERE trial_used = 1'
+        ).fetchone()
+        return row[0] if row else 0
+
+
+def get_payments_count() -> int:
+    """Количество успешных платежей"""
+    with _get_connection() as conn:
+        row = conn.execute(
+            "SELECT COUNT(*) FROM payments WHERE status = 'succeeded'"
+        ).fetchone()
+        return row[0] if row else 0
+
 def get_user_subscription(user_id: int) -> Optional[Dict]:
     with _get_connection() as conn:
         row = conn.execute(
