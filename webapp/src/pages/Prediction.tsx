@@ -227,14 +227,22 @@ export function Prediction() {
           {/* Заголовок матча */}
           <div className="card text-center relative overflow-hidden animate-fade-up border-t-2 border-t-blue-500">
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent rounded-full" />
-            <h2 className="text-lg sm:text-xl font-extrabold text-white leading-tight mt-2">
+  
+            {/* 🆕 Название лиги + тир-бейдж */}
+            {prediction.league_name && (
+              <div className="flex items-center justify-center gap-2 mt-3 mb-2">
+                <p className="text-white/60 text-[12px] font-medium">🏆 {prediction.league_name}</p>
+                {prediction.tier && <TierBadge tier={prediction.tier} />}
+              </div>
+            )}
+  
+            <h2 className="text-lg sm:text-xl font-extrabold text-white leading-tight">
               {prediction.home_team}
               <span className="text-[#8b9baa] font-normal text-base mx-1">vs</span>
               {prediction.away_team}
             </h2>
             <p className="text-[11px] sm:text-[12px] text-[#8b9baa] mt-2 flex items-center justify-center gap-1.5 flex-wrap">
               <span className="badge badge-blue">🤖 AI v2.2</span>
-              <span className={`badge ${tierStyle.badge}`}>{tierStyle.label}</span>
               {prediction.is_hot && (
                 <span className="badge badge-gold animate-live">🔥 HOT</span>
               )}
