@@ -43,7 +43,27 @@ export function Home() {
             <span className="live-badge">LIVE</span>
           </div>
 
-          {isLoading ? (
+          {/* 🆕 БЛОК ОШИБКИ — когда сервер спит */}
+          {isError ? (
+            <>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-2xl">😴</span>
+                <p className="text-white/90 text-[14px] font-bold">
+                  Сервер просыпается...
+                </p>
+              </div>
+              <p className="text-white/70 text-[13px] mb-4 leading-relaxed">
+                Это займёт до 30 секунд при первом открытии.
+                Попробуйте обновить через пару секунд.
+              </p>
+              <button
+                onClick={() => refetch()}
+                className="block w-full rounded-xl bg-white text-orange-600 text-center text-[15px] font-extrabold py-3 active:scale-[.96] transition-transform shadow-lg"
+              >
+                🔄 Попробовать снова
+              </button>
+            </>
+          ) : isLoading ? (
             <div className="space-y-3">
               <div className="skeleton h-5 w-2/3" />
               <div className="skeleton h-6 w-3/4" />
