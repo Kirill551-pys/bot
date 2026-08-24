@@ -354,7 +354,8 @@ def _set_hot_bet(best_match: dict) -> dict:
     best_outcome_value = 0.0
     
     for key, value in value_map.items():
-        if value > best_outcome_value:
+        prob = best_match.get('result', {}).get(outcome_names[key], 0)
+        if value > best_outcome_value and prob >= 0.50:
             best_outcome_value = value
             best_outcome_key = key
     
@@ -433,9 +434,9 @@ def get_hot_prediction(user: dict = Depends(get_current_user)):
                 odds = fixture.get('odds', {})
                 result_probs = prediction.get('result', {})
 
-                value_home = calc_value(result_probs.get('Home Win', 0), odds.get('home_win'), min_prob=0.40)
-                value_draw = calc_value(result_probs.get('Draw', 0), odds.get('draw'), min_prob=0.25)
-                value_away = calc_value(result_probs.get('Away Win', 0), odds.get('away_win'), min_prob=0.40)
+                value_home = calc_value(result_probs.get('Home Win', 0), odds.get('home_win'), min_prob=0.50)
+                value_draw = calc_value(result_probs.get('Draw', 0), odds.get('draw'), min_prob=0.30)
+                value_away = calc_value(result_probs.get('Away Win', 0), odds.get('away_win'), min_prob=0.50)
 
                 best_value = max(value_home, value_draw, value_away)
                 confidence = prediction.get('hot_confidence', 0)
@@ -443,9 +444,9 @@ def get_hot_prediction(user: dict = Depends(get_current_user)):
                 # ========== ЭТАП 2: Дополнительные рынки (угловые, карточки) ==========
                 additional_markets = _extract_additional_markets(prediction)
 
-                # Score = уверенность исхода + бонус за value + бонус за доп. рынки
-                score = confidence + (best_value * 100 if best_value > 0 else 0)
-                score += len(additional_markets) * 5  # бонус за каждый доп. рынок
+                # Бонус за value ограничен 30 очками — иначе "лотерейные" аутсайдеры побеждают
+                value_bonus = min(best_value, 0.30) * 100 if best_value > 0 else 0
+                score = confidence + value_bonus + len(additional_markets) * 5
 
                 # Условия Hot: уверенность >= порога И (value > 0 ИЛИ есть доп. рынки)
                 has_value = best_value > 0
