@@ -8,8 +8,7 @@ from typing import Optional, Dict, List
 
 logger = logging.getLogger(__name__)
 
-# ✅ АБСОЛЮТНЫЙ ПУТЬ: БД всегда в корне проекта
-_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))  # ← один dirname!
 DB_PATH = os.path.join(_PROJECT_ROOT, 'subscribers.db')
 
 logger.info(f"📂 Путь к БД: {DB_PATH}")  # ← чтобы видеть в логах
