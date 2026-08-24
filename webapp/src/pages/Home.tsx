@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 
 export function Home() {
   const { user, hapticFeedback } = useTelegram();
-  const { data: hot, isLoading, isError, error, refetch } = useQuery({
+  const { data: hot, isLoading, isError, refetch } = useQuery({
     queryKey: ['hot-prediction'],
     queryFn: () => api.getHotPrediction(),
     refetchInterval: 60_000,
