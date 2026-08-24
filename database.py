@@ -1,5 +1,6 @@
 import sqlite3
 import logging
+import os
 import threading
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
@@ -7,7 +8,12 @@ from typing import Optional, Dict, List
 
 logger = logging.getLogger(__name__)
 
-DB_PATH = 'subscribers.db'
+# ✅ АБСОЛЮТНЫЙ ПУТЬ: БД всегда в корне проекта
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DB_PATH = os.path.join(_PROJECT_ROOT, 'subscribers.db')
+
+logger.info(f"📂 Путь к БД: {DB_PATH}")  # ← чтобы видеть в логах
+
 _db_lock = threading.Lock()
 
 @contextmanager
@@ -177,13 +183,15 @@ def get_referral_count(user_id: int) -> int:
     return row[0] if row else 0
 
 def check_subscription_expired() -> int:
-    now = datetime.now(timezone.utc).isoformat()
+    # ✅ Используем тот же формат, что и datetime('now') в SQLite
+    now = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
     with _db_lock:
         with _get_connection() as conn:
             cursor = conn.execute('''
                 UPDATE subscribers
                 SET is_active = 0, subscription_type = 'free'
                 WHERE subscription_end < ? AND is_active = 1
+                  AND subscription_type NOT IN ('free', 'trial')
             ''', (now,))
             conn.commit()
             return cursor.rowcount

@@ -9,7 +9,13 @@ import os
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters.command import Command
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
-from database import get_all_users_count, get_active_subscriptions_count, get_trials_count, get_payments_count
+from database import (
+    init_db,
+    get_all_users_count,
+    get_active_subscriptions_count,
+    get_trials_count,
+    get_payments_count
+)
 
 from config import BOT_TOKEN, ADMIN_ID, CHANNEL_USERNAME
 
@@ -112,9 +118,11 @@ async def cmd_help(message: types.Message):
 
 # ==================== ЗАПУСК ====================
 async def main():
+    init_db()  # ← ДОБАВЬ ЭТУ СТРОКУ
     print("\n" + "="*50)
     print("🤖 БОТ-ЛАУНЧЕР ЗАПУЩЕН")
     print(f"🔗 Web App URL: {WEBAPP_URL}")
+    print(f"👑 Admin ID: {ADMIN_ID}")  # ← для проверки
     print("="*50 + "\n")
     await dp.start_polling(bot)
 
