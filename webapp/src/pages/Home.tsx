@@ -140,12 +140,21 @@ export function Home() {
                   </p>
                   {hot.additional_markets.map((market: any) => (
                     <div key={market.market} className="flex items-center justify-between bg-white/8 rounded-lg px-3 py-2">
+                      {/* СЛЕВА: название + модель + букмекер */}
                       <div>
                         <p className="text-white text-[13px] font-bold">{market.label}</p>
                         <p className="text-white/50 text-[11px]">
                           Модель: {Math.round(market.probability * 100)}%
                         </p>
+                        {/* 🆕 Реальный кэф и Value, если есть */}
+                        {market.bookmaker_odds && (
+                          <p className={`text-[10px] font-bold mt-0.5 ${market.value > 0 ? 'text-emerald-300' : 'text-white/40'}`}>
+                            Букмекер: {market.bookmaker_odds}
+                            {market.value > 0 && ` · Value +${Math.round(market.value * 100)}%`}
+                          </p>
+                        )}
                       </div>
+                      {/* СПРАВА: справедливый кэф */}
                       <div className="text-right">
                         <p className="text-white text-[14px] font-extrabold">{market.fair_odds}</p>
                         <p className="text-white/50 text-[10px]">справедл. кэф</p>
