@@ -146,6 +146,28 @@ app.add_middleware(
 def root():
     return {"status": "ok", "message": "Football Predictor API is running"}
 
+@app.get("/debug")
+def debug_info():
+    """Диагностика: какая версия кода на сервере"""
+    endpoints = []
+    for route in app.routes:
+        if hasattr(route, 'path') and hasattr(route, 'methods'):
+            endpoints.append(f"{list(route.methods)} {route.path}")
+    
+    return {
+        "status": "OK",
+        "version": "2.4-hot-list",  # ← МЕТКА ВЕРСИИ
+        "models_count": len(MODELS),
+        "leagues_loaded": list(MODELS.keys()),
+        "endpoints": endpoints[:20],  # первые 20
+        "has_hot_list_endpoint": "/api/predictions/hot/list" in endpoints,
+        "hot_endpoint_methods": next(
+            (list(r.methods) for r in app.routes 
+             if hasattr(r, 'path') and r.path == '/api/predictions/hot'),
+            None
+        )
+    }
+
 # ==================== АВТОРИЗАЦИЯ ====================
 def get_current_user(x_telegram_init_data: str = Header(None, alias="X-Telegram-Init-Data")) -> dict:
     return verify_telegram_init_data(x_telegram_init_data)
