@@ -181,5 +181,5 @@ ODDS_LEAGUES_MAP = {
 # Лиги, для которых запрашиваем коэффициенты (для экономии кредитов)
 # Чем меньше лиг — тем меньше кредитов тратится
 ODDS_ACTIVE_LEAGUES = [
-    "epl", "laLiga", "bundesliga", "seriaA", "ligue1", "rpl", "usa", "japan", "turkey", "champions_league", "china", "eredivisise", "austria"
+    "epl", "laLiga", "bundesliga", "seriaA", "ligue1","portugueseLiga", "turkey", "champions_league", "eredivisise", "greece"
 ]
