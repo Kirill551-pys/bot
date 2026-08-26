@@ -491,14 +491,19 @@ def _collect_hot_predictions(limit: int = 5) -> List[dict]:
                 home_normalized = normalize_team_name(fixture['home_team'])
                 away_normalized = normalize_team_name(fixture['away_team'])
                 
-                home_team = find_similar_team(home_normalized, all_teams, threshold=0.5)
-                away_team = find_similar_team(away_normalized, all_teams, threshold=0.5)
+                home_team = find_similar_team(home_normalized, all_teams, threshold=0.55)
+                away_team = find_similar_team(away_normalized, all_teams, threshold=0.55)
                 
                 if not home_team or not away_team:
                     if not home_team:
                         print(f"   ⚠️ {league_key}: НЕ НАЙДЕНА '{fixture['home_team']}'", flush=True)
                     if not away_team:
                         print(f"   ⚠️ {league_key}: НЕ НАЙДЕНА '{fixture['away_team']}'", flush=True)
+                    debug_stats[league_key]['teams_not_found'] += 1
+                    continue
+
+                if home_team == away_team:
+                    print(f"   ⚠️ {league_key}: КОМАНДЫ СОВПАЛИ! '{fixture['home_team']}' vs '{fixture['away_team']}' → оба = '{home_team}'", flush=True)
                     debug_stats[league_key]['teams_not_found'] += 1
                     continue
                 
@@ -577,6 +582,15 @@ def _collect_hot_predictions(limit: int = 5) -> List[dict]:
                 debug_stats[league_key]['prediction_errors'] += 1
                 logger.warning(f"⚠️ Ошибка обработки матча: {e}")
                 continue
+
+
+    # 🆕 ОТЛАДКА: ВСЕ кандидаты до диверсификации
+    print("\n" + "="*60, flush=True)
+    print(f"🔍 ВСЕГО КАНДИДАТОВ ДО ДИВЕРСИФИКАЦИИ: {len(candidates)}", flush=True)
+    if candidates:
+        for i, c in enumerate(candidates[:10], 1):
+            print(f"   {i}. {c['league']} | {c['home_team']} vs {c['away_team']} | score={c['score']} | {c['hot_bet']}", flush=True)
+    print("="*60, flush=True)
     
     # Диагностика
     print("\n" + "="*60, flush=True)
