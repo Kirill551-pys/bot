@@ -376,8 +376,8 @@ def _set_hot_bet(best_match: dict) -> dict:
         ('Away Win', 'away_win', f"П2 ({best_match.get('away_team', '')})"),
     ]:
         prob = result_probs.get(res_key, 0)
-        val = calc_value(prob, odds.get(odds_key), min_prob=0.50)
-        if prob >= 0.50 and val > 0:
+        val = calc_value(prob, odds.get(odds_key), min_prob=0.55)
+        if prob >= 0.55 and val > 0:
             candidates.append((val, prob, label))
 
     # 2. ТОТАЛ 2.5
@@ -491,8 +491,8 @@ def _collect_hot_predictions(limit: int = 5) -> List[dict]:
                 home_normalized = normalize_team_name(fixture['home_team'])
                 away_normalized = normalize_team_name(fixture['away_team'])
                 
-                home_team = find_similar_team(home_normalized, all_teams, threshold=0.55)
-                away_team = find_similar_team(away_normalized, all_teams, threshold=0.55)
+                home_team = find_similar_team(home_normalized, all_teams, threshold=0.5)
+                away_team = find_similar_team(away_normalized, all_teams, threshold=0.5)
                 
                 if not home_team or not away_team:
                     if not home_team:
@@ -521,10 +521,26 @@ def _collect_hot_predictions(limit: int = 5) -> List[dict]:
                 
                 odds = fixture.get('odds', {}) or {}
                 result_probs = prediction.get('result', {})
-                
+            
+            # 🛡️ ЗАЩИТА от битых/перепутанных кэфов:
+            # если букмекер и модель НЕ согласны, кто фаворит,
+            # и кэфы экстремальные — не доверяем value по исходам
+                bk_home_fav = (odds.get('home_win') or 99) < (odds.get('away_win') or 99)
+                md_home_fav = result_probs.get('Home Win', 0) > result_probs.get('Away Win', 0)
+                extreme = max(odds.get('home_win') or 0, odds.get('away_win') or 0) > 3.5
+                odds_suspicious = (bk_home_fav != md_home_fav) and extreme
+            
+                if odds_suspicious:
+                    print(f"   🛡️ {league_key}: подозрительные кэфы ({fixture['home_team']}: {odds.get('home_win')} / {odds.get('away_win')}) — value по исходам обнулён", flush=True)
+            
                 value_home = calc_value(result_probs.get('Home Win', 0), odds.get('home_win'), min_prob=0.50)
                 value_draw = calc_value(result_probs.get('Draw', 0), odds.get('draw'), min_prob=0.30)
                 value_away = calc_value(result_probs.get('Away Win', 0), odds.get('away_win'), min_prob=0.50)
+            
+                # 🛡️ Если кэфы подозрительные — обнуляем value по исходам
+                if odds_suspicious:
+                    value_home = 0.0
+                    value_away = 0.0
                 
                 tg_probs = prediction.get('total_goals') or {}
                 value_over = calc_value(tg_probs.get('Over 2.5', 0), odds.get('over_2_5'), min_prob=0.50)
