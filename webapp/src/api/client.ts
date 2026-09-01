@@ -274,6 +274,17 @@ class ApiClient {
       return null;
     }
   }
+  
+    /** 🆕 ТОП-5 hot-прогнозов для кнопки «Следующий» */
+  async getHotList(): Promise<HotPrediction[]> {
+    try {
+      const response = await this.client.get<HotPrediction[]>('/api/predictions/hot/list');
+      return response.data;
+    } catch (error) {
+      console.error('Ошибка получения списка hot:', error);
+      return [];
+    }
+  }
 
   // ==================== 🆕 РАСПИСАНИЕ МАТЧЕЙ ====================
 

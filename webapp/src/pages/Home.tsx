@@ -2,17 +2,25 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../api/client';
 import { useTelegram } from '../hooks/useTelegram';
 import { Link } from 'react-router-dom';
+import { useState } from 'react';
 
 export function Home() {
   const { user, hapticFeedback } = useTelegram();
-  const { data: hot, isLoading, isError, refetch } = useQuery({
-    queryKey: ['hot-prediction'],
-    queryFn: () => api.getHotPrediction(),
+  const [hotIndex, setHotIndex] = useState(0);
+
+  const { data: hotList, isLoading, isError, refetch } = useQuery({
+    queryKey: ['hot-list'],
+    queryFn: () => api.getHotList(),
     refetchInterval: 60_000,
-    retry: 3,  // 3 попытки
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000), // 1с, 2с, 4с, макс 10с
-    staleTime: 5 * 60 * 1000, // кэш на 5 минут
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+    staleTime: 5 * 60 * 1000,
   });
+
+// Безопасный индекс (защита от выхода за пределы списка)
+  const safeIndex = hotList && hotList.length > 0 ? hotIndex % hotList.length : 0;
+  const hot = hotList?.[safeIndex] ?? null;
+  const hasMore = (hotList?.length ?? 0) > 1;
 
   const confidence = Math.round(hot?.hot_confidence ?? 0);
 
@@ -174,6 +182,19 @@ export function Home() {
               >
                 Смотреть прогноз →
               </Link>
+              
+              {/* 🆕 КНОПКА: следующий hot-прогноз */}
+              {hasMore && (
+                <button
+                  onClick={() => {
+                    setHotIndex(safeIndex + 1);
+                    hapticFeedback('light');
+                  }}
+                  className="mt-2 block w-full rounded-xl bg-white/15 text-white text-center text-[14px] font-bold py-2.5 active:scale-[.96] transition-transform"
+                >
+                  🔥 Следующий прогноз ({safeIndex + 1}/{hotList!.length})
+                </button>
+              )}
             </>
           ) : (
             <>
