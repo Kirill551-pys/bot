@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useMemo } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 /* ---------- Типизация Telegram WebApp ---------- */
 interface TelegramUser {
