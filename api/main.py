@@ -491,8 +491,8 @@ def _collect_hot_predictions(limit: int = 5) -> List[dict]:
                 home_normalized = normalize_team_name(fixture['home_team'])
                 away_normalized = normalize_team_name(fixture['away_team'])
                 
-                home_team = find_similar_team(home_normalized, all_teams, threshold=0.5)
-                away_team = find_similar_team(away_normalized, all_teams, threshold=0.5)
+                home_team = find_similar_team(home_normalized, all_teams, threshold=0.65)
+                away_team = find_similar_team(away_normalized, all_teams, threshold=0.65)
                 
                 if not home_team or not away_team:
                     if not home_team:
