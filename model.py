@@ -126,71 +126,23 @@ def assign_football_season(df: pd.DataFrame) -> pd.DataFrame:
     df['season'] = season_start_year.astype(str) + '-' + season_end_year.astype(str)
     return df
 
-def find_similar_team(team_name: str, all_teams: List[str], threshold: float = 0.65) -> Optional[str]:
+def find_similar_team(team_name: str, all_teams: List[str], threshold: float = 0.60) -> Optional[str]:
     """
-    Улучшенный поиск похожих команд с защитой от ложных срабатываний.
-    
-    Защита: команды с общими "стоп-словами" (City, United, FC) 
-    не должны матчиться только из-за них.
+    Поиск команды: точное совпадение → нечёткий поиск.
+    Порог 0.60 — баланс: находит сокращения (Man City),
+    но НЕ матчит разные команды (Coventry City ≠ Man City, похожесть 0.48).
     """
     if not all_teams or not team_name:
         return None
-    
-    # Точное совпадение (без учёта регистра)
-    lower_teams = {t.lower(): t for t in all_teams}
-    if team_name.lower() in lower_teams:
-        return lower_teams[team_name.lower()]
-    
-    # Стоп-слова, которые НЕ должны влиять на матчинг
-    STOP_WORDS = {
-        'fc', 'sc', 'ac', 'as', 'cf', 'cd', 'rc', 'rcd',
-        'city', 'united', 'athletic', 'sporting', 'real',
-        'fc', 'club', 'de', 'la', 'del', 'das', 'dos'
-    }
-    
-    def clean_name(name: str) -> str:
-        """Убирает стоп-слова для более точного сравнения"""
-        words = name.lower().split()
-        cleaned = [w for w in words if w not in STOP_WORDS and len(w) > 2]
-        return ' '.join(cleaned)
-    
-    team_clean = clean_name(team_name)
-    
-    # Если после очистки ничего не осталось — используем оригинал
-    if not team_clean:
-        team_clean = team_name.lower()
-    
-    best_match = None
-    best_score = 0
-    
-    for candidate in all_teams:
-        candidate_clean = clean_name(candidate)
-        if not candidate_clean:
-            candidate_clean = candidate.lower()
-        
-        # Считаем похожести по Jaccard (множество слов)
-        words1 = set(team_clean.split())
-        words2 = set(candidate_clean.split())
-        
-        if not words1 or not words2:
-            continue
-        
-        intersection = words1 & words2
-        union = words1 | words2
-        jaccard = len(intersection) / len(union)
-        
-        # Также считаем стандартную похожести через difflib
-        from difflib import SequenceMatcher
-        seq_score = SequenceMatcher(None, team_clean, candidate_clean).ratio()
-        
-        # Комбинированный score: 60% SequenceMatcher + 40% Jaccard
-        combined_score = 0.6 * seq_score + 0.4 * jaccard
-        
-        if combined_score > best_score and combined_score >= threshold:
-            best_score = combined_score
-            best_match = candidate
-    
-    return best_match
+
+    # 1. Точное совпадение (без учёта регистра)
+    for t in all_teams:
+        if t.lower() == team_name.lower():
+            return t
+
+    # 2. Нечёткий поиск
+    matches = get_close_matches(team_name, list(all_teams), n=1, cutoff=threshold)
+    return matches[0] if matches else None
 
 # ==================== ELO РЕЙТИНГИ ====================
 def calculate_elo_ratings_incremental(df: pd.DataFrame, k_factor: int = 32, initial_rating: int = 1500, home_advantage: int = 100) -> Tuple[pd.DataFrame, Dict]:

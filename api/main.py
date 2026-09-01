@@ -491,8 +491,8 @@ def _collect_hot_predictions(limit: int = 5) -> List[dict]:
                 home_normalized = normalize_team_name(fixture['home_team'])
                 away_normalized = normalize_team_name(fixture['away_team'])
                 
-                home_team = find_similar_team(home_normalized, all_teams, threshold=0.65)
-                away_team = find_similar_team(away_normalized, all_teams, threshold=0.65)
+                home_team = find_similar_team(home_normalized, all_teams, threshold=0.60)
+                away_team = find_similar_team(away_normalized, all_teams, threshold=0.60)
                 
                 if not home_team or not away_team:
                     if not home_team:
@@ -501,6 +501,7 @@ def _collect_hot_predictions(limit: int = 5) -> List[dict]:
                         print(f"   ⚠️ {league_key}: НЕ НАЙДЕНА '{fixture['away_team']}'", flush=True)
                     debug_stats[league_key]['teams_not_found'] += 1
                     continue
+
 
                 if home_team == away_team:
                     print(f"   ⚠️ {league_key}: КОМАНДЫ СОВПАЛИ! '{fixture['home_team']}' vs '{fixture['away_team']}' → оба = '{home_team}'", flush=True)
