@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 
 /* ---------- Типизация Telegram WebApp ---------- */
 interface TelegramUser {
@@ -6,6 +6,8 @@ interface TelegramUser {
   first_name?: string;
   last_name?: string;
   username?: string;
+  language_code?: string;
+
 }
 
 interface TelegramWebApp {

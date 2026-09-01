@@ -48,15 +48,17 @@ TEAM_ALIASES = {
     "Leverkusen": "Bayer 04 Leverkusen",
     "RB Leipzig": "RasenBallsport Leipzig",
     "RasenBallsport Leipzig": "RasenBallsport Leipzig",
-    "Borussia Dortmund": "Borussia Dortmund",
-    "Borussia M.Gladbach": "Borussia Mönchengladbach",
-    "Borussia Monchengladbach": "Borussia Mönchengladbach",
-    "Borussia M'gladbach": "Borussia Mönchengladbach",
+    "Borussia Dortmund": "Dortmund",
+    "Borussia M.Gladbach": "M'gladbach",
+    "Borussia Monchengladbach": "M'gladbach",
+    "Borussia Monchengladbach": "M'gladbach",
     "FSV Mainz 05": "Mainz",
     "Mainz 05": "Mainz",
     "Mainz": "Mainz",
     "Hoffenheim": "TSG Hoffenheim",
     "TSG Hoffenheim": "TSG Hoffenheim",
+    "1. FC Köln": "FC Koln",
+    "FC Koln": "FC Koln",
     
     # ==================== Serie A ====================
     "AC Milan": "Milan",
@@ -71,7 +73,10 @@ TEAM_ALIASES = {
     "Hellas Verona": "Verona",
     "Verona": "Verona",
     "SPAL 2013": "Spal",
-    
+
+    # 🇪 Ла Лига
+    "Celta Vigo": "Celta",
+
     # ==================== Ligue 1 ====================
     "Paris SG": "Paris Saint Germain",
     "Paris Saint-Germain": "Paris Saint Germain",
@@ -118,14 +123,18 @@ TEAM_ALIASES = {
     # ==================== Greece ====================
     "Olympiacos": "Olympiakos",
     "Olympiakos": "Olympiakos",
+    "Olympiakos Piraeus": "Olympiacos",
     "Panathinaikos": "Panathinaikos",
-    "AEK Athens": "AEK Athens",
-    
+    "AEK Athens": "AEK",
+    "PAOK Thessaloniki": "PAOK",
+    "Aris Thessaloniki": "Aris",
+
     # ==================== Portugal ====================
     "Benfica": "Benfica",
     "Sporting CP": "Sporting Lisbon",
     "Porto": "Porto",
     "FC Porto": "Porto",
+    "Vitória SC": "Guimaraes",
 }
 
 
