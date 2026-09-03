@@ -6,6 +6,7 @@ from typing import List, Optional
 import sys
 import os
 import logging
+import time
 
 # Добавляем корневую папку в путь (для импорта model.py, database.py)
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -38,6 +39,78 @@ logger = logging.getLogger(__name__)
 MODELS = {}
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
 
+HOT_CACHE: dict = {
+    'data': None,           # Здесь хранится список из 5 hot-прогнозов (или None если кэш пуст)
+    'expires_at': 0.0,      # Время, когда кэш устареет (timestamp в секундах)
+    'lock': False,          # Флаг блокировки: True если кто-то уже пересчитывает кэш
+}
+HOT_CACHE_TTL = 30 * 60     # 30 минут в секундах    # Время жизни кэша: 5 минут (300 секунд)
+
+
+def get_hot_cached() -> list:
+    """
+    Возвращает кэшированные hot-прогнозы или пересчитывает их если кэш устарел.
+    
+    ЛОГИКА РАБОТЫ:
+    1. Проверяем, есть ли валидный кэш (data не None И время не вышло)
+    2. Если да → возвращаем сразу (мгновенно!)
+    3. Если нет → проверяем, не пересчитывает ли кто-то уже (lock)
+    4. Если lock=True → возвращаем старый кэш (даже если устарел), чтобы не было гонки
+    5. Если lock=False → блокируем, пересчитываем, сохраняем, разблокируем
+    
+    ВОЗВРАЩАЕТ:
+    - Список из 0-5 hot-прогнозов (dict)
+    """
+    now = time.time()  # Текущее время в секундах (например, 1693564800.123)
+    
+    # ПРОВЕРКА 1: Кэш валиден?
+    # Условие: data не None (что-то есть) И сейчас < времени истечения
+    if HOT_CACHE['data'] is not None and now < HOT_CACHE['expires_at']:
+        # Кэш свежий → отдаём сразу
+        return HOT_CACHE['data']
+    
+    # ПРОВЕРКА 2: Кто-то уже пересчитывает?
+    # Это защита от "гонки": если 10 пользователей одновременно запросили hot,
+    # и кэш устарел, мы не хотим чтобы все 10 начали пересчитывать одновременно.
+    # Первый начинает пересчёт (lock=True), остальные 9 ждут и получают старый кэш.
+    if HOT_CACHE['lock']:
+        # Кто-то уже пересчитывает → возвращаем старый кэш (даже если устарел)
+        # Лучше старый кэш 5-минутной давности, чем 30-секундное ожидание
+        return HOT_CACHE['data'] if HOT_CACHE['data'] else []
+    
+    # ПРОВЕРКА 3: Нужно пересчитать
+    # Блокируем кэш (lock=True), чтобы другие запросы не начали пересчёт
+    HOT_CACHE['lock'] = True
+    
+    try:
+        # Логируем начало пересчёта (для отладки)
+        print(f"🔄 Пересчёт hot-прогнозов...", flush=True)
+        start = time.time()  # Засекаем время начала
+        
+        # Вызываем тяжёлую функцию пересчёта
+        hot_list = _collect_hot_predictions(limit=5)
+        
+        # Считаем сколько времени заняло
+        elapsed = time.time() - start
+        print(f"✅ Hot пересчитан за {elapsed:.1f}с, найдено {len(hot_list)}", flush=True)
+        
+        # СОХРАНЯЕМ В КЭШ:
+        HOT_CACHE['data'] = hot_list  # Сохраняем список прогнозов
+        HOT_CACHE['expires_at'] = now + HOT_CACHE_TTL  # Устанавливаем время истечения (сейчас + 5 минут)
+        
+    except Exception as e:
+        # Если произошла ошибка — логируем, но не роняем сервер
+        print(f"❌ Ошибка пересчёта hot: {e}", flush=True)
+        # Возвращаем старый кэш если есть
+        return HOT_CACHE['data'] if HOT_CACHE['data'] else []
+        
+    finally:
+        # РАЗБЛОКИРУЕМ кэш в любом случае (даже если была ошибка)
+        # Это важно: если не разблокировать, все последующие запросы будут ждать вечно
+        HOT_CACHE['lock'] = False
+    
+    # Возвращаем свежий кэш
+    return HOT_CACHE['data']
 
 def load_all_models():
     print("\n" + "="*80, flush=True)
@@ -480,6 +553,142 @@ def _diversify_by_league(candidates: list, limit: int = 5, penalty: float = 15) 
     return result
 
 
+def _process_league(league_key: str, model_info: dict, tier: str, min_conf: float) -> tuple:
+    """
+    Обрабатывает ОДНУ лигу и возвращает список кандидатов + статистику.
+    Вызывается параллельно через ThreadPoolExecutor.
+    
+    ВОЗВРАЩАЕТ: (candidates_list, debug_stats_dict)
+    """
+    candidates = []
+    debug = {
+        'total_fixtures': 0,
+        'teams_found': 0,
+        'teams_not_found': 0,
+        'prediction_errors': 0,
+        'low_confidence': 0,
+        'no_value_no_markets': 0,
+        'passed': 0,
+    }
+    
+    fixtures = get_fixtures(league_key)
+    if not fixtures:
+        return candidates, debug
+    
+    df = model_info.get('df')
+    if df is None:
+        return candidates, debug
+    
+    all_teams = list(set(df['home_team']) | set(df['away_team']))
+    debug['total_fixtures'] = len(fixtures)
+    
+    for fixture in fixtures:
+        try:
+            # Нормализуем имена через словарь алиасов
+            home_normalized = normalize_team_name(fixture['home_team'])
+            away_normalized = normalize_team_name(fixture['away_team'])
+            
+            home_team = find_similar_team(home_normalized, all_teams, threshold=0.6)
+            away_team = find_similar_team(away_normalized, all_teams, threshold=0.6)
+            
+            if not home_team or not away_team:
+                debug['teams_not_found'] += 1
+                continue
+            
+            # Критическая проверка: команды не должны совпадать
+            if home_team == away_team:
+                debug['teams_not_found'] += 1
+                continue
+            
+            debug['teams_found'] += 1
+            
+            prediction = predict_match(
+                team1=home_team, team2=away_team,
+                model_data=model_info['model_data'],
+                ratings_dict=model_info.get('ratings', {}),
+                all_matches_df=df,
+            )
+            if 'error' in prediction or 'result' not in prediction:
+                debug['prediction_errors'] += 1
+                continue
+            
+            odds = fixture.get('odds', {}) or {}
+            result_probs = prediction.get('result', {})
+            
+            # Sanity-check кэфов (защита от битых данных)
+            bk_home_fav = (odds.get('home_win') or 99) < (odds.get('away_win') or 99)
+            md_home_fav = result_probs.get('Home Win', 0) > result_probs.get('Away Win', 0)
+            extreme = max(odds.get('home_win') or 0, odds.get('away_win') or 0) > 3.5
+            odds_suspicious = (bk_home_fav != md_home_fav) and extreme
+            
+            value_home = calc_value(result_probs.get('Home Win', 0), odds.get('home_win'), min_prob=0.50)
+            value_draw = calc_value(result_probs.get('Draw', 0), odds.get('draw'), min_prob=0.30)
+            value_away = calc_value(result_probs.get('Away Win', 0), odds.get('away_win'), min_prob=0.50)
+            
+            # Если кэфы подозрительные — обнуляем value по исходам
+            if odds_suspicious:
+                value_home = 0.0
+                value_away = 0.0
+            
+            tg_probs = prediction.get('total_goals') or {}
+            value_over = calc_value(tg_probs.get('Over 2.5', 0), odds.get('over_2_5'), min_prob=0.50)
+            value_under = calc_value(tg_probs.get('Under 2.5', 0), odds.get('under_2_5'), min_prob=0.50)
+            
+            best_value = max(value_home, value_draw, value_away, value_over, value_under)
+            additional_markets = _extract_additional_markets(prediction, odds)
+            confidence = prediction.get('hot_confidence', 0)
+            
+            if confidence < min_conf:
+                debug['low_confidence'] += 1
+                continue
+            
+            if not (best_value > 0 or additional_markets):
+                debug['no_value_no_markets'] += 1
+                continue
+            
+            value_bonus = min(best_value, 0.30) * 100 if best_value > 0 else 0
+            score = confidence + value_bonus + len(additional_markets) * 5
+            
+            candidate = {
+                **prediction,
+                'league': league_key,
+                'league_name': model_info['name'],
+                'tier': tier,
+                'commence_time': fixture['commence_time'],
+                'odds': odds,
+                'value': {
+                    'home_win': value_home, 'draw': value_draw,
+                    'away_win': value_away, 'over_2_5': value_over,
+                    'under_2_5': value_under,
+                },
+                'best_value': best_value,
+                'additional_markets': additional_markets,
+                'is_hot': True,
+                'score': round(score, 1),
+            }
+            candidate = _set_hot_bet(candidate)
+            
+            # Пересчёт trust_signal на основе hot_confidence
+            hc = candidate.get('hot_confidence', 0)
+            if hc >= 70:
+                candidate['trust_signal'] = "💎 АЛМАЗНЫЙ | Максимальная уверенность"
+            elif hc >= 60:
+                candidate['trust_signal'] = "🥇 ЗОЛОТОЙ | Высокая уверенность"
+            elif hc >= 55:
+                candidate['trust_signal'] = " СЕРЕБРЯНЫЙ | Средняя уверенность"
+            else:
+                candidate['trust_signal'] = "🥉 БРОНЗОВЫЙ | Низкая уверенность"
+            
+            candidates.append(candidate)
+            debug['passed'] += 1
+            
+        except Exception as e:
+            debug['prediction_errors'] += 1
+            logger.warning(f"⚠️ Ошибка обработки матча {fixture.get('home_team')} vs {fixture.get('away_team')}: {e}")
+            continue
+    
+    return candidates, debug
+
 def _collect_hot_predictions(limit: int = 5) -> List[dict]:
     """Собирает ТОП-N hot-прогнозов из БУДУЩИХ матчей с кэфами."""
     candidates = []
@@ -664,21 +873,30 @@ def _collect_hot_predictions(limit: int = 5) -> List[dict]:
 
 @app.get("/api/predictions/hot")
 def get_hot_prediction(user: dict = Depends(get_current_user)):
-    """Лучший hot-прогноз (главная карточка)"""
-    hot_list = _collect_hot_predictions(limit=5)
+    """
+    Лучший hot-прогноз (главная карточка) — с кэшем.
+    
+    ПЕРВЫЙ ЗАПРОС: 30-40 сек (пересчёт)
+    ПОВТОРНЫЕ ЗАПРОСЫ (в течение 5 мин): <100 мс (из кэша)
+    """
+    hot_list = get_hot_cached()  # ← Используем кэш вместо прямого вызова
     if not hot_list:
         raise HTTPException(status_code=404, detail="No hot predictions available")
     return hot_list[0]
 
 
 @app.get("/api/predictions/hot/list")
-def get_hot_prediction_list(user: dict = Depends(require_subscription)):
-    """🆕 ТОП-5 hot-прогнозов для кнопки «Следующий»"""
-    hot_list = _collect_hot_predictions(limit=5)
+def get_hot_prediction_list(user: dict = Depends(get_current_user)):
+    """
+    ТОП-5 hot-прогнозов для кнопки «Следующий» — с кэшем.
+    
+    ПЕРВЫЙ ЗАПРОС: 30-40 сек (пересчёт)
+    ПОВТОРНЫЕ ЗАПРОСЫ (в течение 5 мин): <100 мс (из кэша)
+    """
+    hot_list = get_hot_cached()  # ← Используем кэш вместо прямого вызова
     if not hot_list:
         raise HTTPException(status_code=404, detail="No hot predictions available")
     return hot_list
-
 
 # ==================== ENDPOINTS: РАСПИСАНИЕ МАТЧЕЙ ====================
 
