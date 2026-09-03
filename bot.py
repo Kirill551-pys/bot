@@ -9,16 +9,7 @@ import os
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters.command import Command
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
-from database import (
-    init_db,
-    get_all_users_count,
-    get_active_subscriptions_count,
-    get_trials_count,
-    get_payments_count
-)
-
-from config import BOT_TOKEN, ADMIN_ID, CHANNEL_USERNAME
-
+from config import BOT_TOKEN, ADMIN_ID
 
 # Настройка логирования
 logging.basicConfig(
@@ -35,6 +26,7 @@ dp = Dispatcher()
 # URL твоего Web App (используем переменную окружения или дефолтный с Render)
 WEBAPP_URL = os.getenv("WEBAPP_URL", "https://bot1-m0bm.onrender.com")
 
+
 def get_main_menu():
     """Главное меню только с кнопкой Web App"""
     return ReplyKeyboardMarkup(
@@ -43,39 +35,19 @@ def get_main_menu():
                 text="🚀 Открыть приложение",
                 web_app=WebAppInfo(url=WEBAPP_URL)
             )],
-            [KeyboardButton(text="❓ Помощь /help")]
+            [KeyboardButton(text="❓ Помощь")]
         ],
         resize_keyboard=True
     )
 
-# ==================== ОБРАБОТЧИКИ ====================
 
-@dp.message(Command("stats"))
-async def cmd_stats(message: types.Message):
-    """Статистика бота (только для администратора)"""
-    if message.from_user.id != ADMIN_ID:
-        await message.answer("⛔ Доступ запрещён")
-        return
-    
-    users = get_all_users_count()
-    active_subs = get_active_subscriptions_count()
-    trials = get_trials_count()
-    payments = get_payments_count()
-    
-    await message.answer(
-        f"📊 <b>Статистика бота</b>\n\n"
-        f"👥 Всего пользователей: <b>{users}</b>\n"
-        f"💎 Активных подписок: <b>{active_subs}</b>\n"
-        f"🎁 Использовано trial: <b>{trials}</b>\n"
-        f"💰 Платежей: <b>{payments}</b>",
-        parse_mode="HTML"
-    )
+# ==================== ОБРАБОТЧИКИ ====================
 
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     await message.answer(
-        "⚽ <b>Добро пожаловать в Футбольный Прогнозист Pro!</b>\n\n"
-        "📱 <b>Весь функционал доступен в нашем приложении:</b>\n"
+        "⚽ <b>Добро пожаловать в Тактику Ставок!</b>\n\n"
+        "📱 <b>Весь функционал доступен в приложении:</b>\n"
         "🔥 Горячие прогнозы с высокой уверенностью\n"
         "📊 Расширенная статистика по 20+ лигам\n"
         "🎯 Прогнозы на угловые, карточки, удары и фолы\n"
@@ -83,52 +55,92 @@ async def cmd_start(message: types.Message):
         "Нажмите кнопку ниже, чтобы начать 👇",
         reply_markup=get_main_menu(),
         parse_mode="HTML"
-        # Отключаем удаление клавиатуры, чтобы кнопка всегда была под рукой
     )
 
 
-@dp.message(Command("channel_stats"))
-async def cmd_channel_stats(message: types.Message):
-    """Количество подписчиков канала"""
-    if message.from_user.id != ADMIN_ID:
-        await message.answer("⛔ Доступ запрещён")
-        return
-    
-    try:
-        member_count = await bot.get_chat_member_count(CHANNEL_USERNAME)
-        await message.answer(
-            f"📢 Подписчиков в канале <b>{CHANNEL_USERNAME}</b>: <b>{member_count}</b>",
-            parse_mode="HTML"
-        )
-    except Exception as e:
-        await message.answer(f"❌ Ошибка: {e}")
-
 @dp.message(Command("help"))
-@dp.message(F.text == "❓ Помощь /help")
 async def cmd_help(message: types.Message):
+    """Обработчик команды /help"""
     await message.answer(
         "📚 <b>Как пользоваться:</b>\n\n"
-        "1️ Нажмите кнопку <b>🚀 Открыть приложение</b>\n"
-        "2️ Выберите интересующую лигу и матч\n"
+        "1️⃣ Нажмите кнопку <b>🚀 Открыть приложение</b>\n"
+        "2️⃣ Выберите интересующую лигу и матч\n"
         "3️⃣ Получите детальный прогноз с вероятностями\n\n"
-        "💡 <i>Все данные обновляются в реальном времени. Для доступа ко всем функциям оформите подписку внутри приложения.</i>\n\n"
+        "💡 <i>Все данные обновляются в реальном времени.</i>\n\n"
         "⚠️ <i>Прогнозы носят информационный характер. Ставьте ответственно!</i>\n\n"
         "📄 <a href='https://telegra.ph/Oferta-Taktika-Stavok-09-01'>Публичная оферта</a>\n"
-        "🔐 <a href='https://telegra.ph/Politika-PDn-Taktika-Stavok-09-01'>Политика персональных данных</a>\n"
+        "🔐 <a href='https://telegra.ph/Politika-PDn-Taktika-Stavok-09-01'>Политика ПДн</a>\n"
         "💬 <a href='https://t.me/Tactika_Stavok_bot'>Поддержка</a>",
         parse_mode="HTML",
         disable_web_page_preview=True
     )
 
+
+@dp.message(F.text == "❓ Помощь")
+async def help_button_handler(message: types.Message):
+    """Обработчик кнопки помощи из клавиатуры"""
+    await cmd_help(message)
+
+
+@dp.message(Command("stats"))
+async def cmd_stats(message: types.Message):
+    """Обработчик команды /stats — открывает статистику в Web App"""
+    stats_url = f"{WEBAPP_URL}/stats"
+    await message.answer(
+        "📊 <b>Статистика</b>\n\n"
+        "Откройте приложение для просмотра расширенной статистики:\n"
+        "• Топ-3 команды по угловым, карточкам, ударам\n"
+        "• Детальная статистика каждой команды\n"
+        "• Форма, голы, xG и многое другое\n\n"
+        "Нажмите кнопку ниже 👇",
+        reply_markup=ReplyKeyboardMarkup(
+            keyboard=[
+                [KeyboardButton(
+                    text=" Открыть статистику",
+                    web_app=WebAppInfo(url=stats_url)
+                )]
+            ],
+            resize_keyboard=True
+        ),
+        parse_mode="HTML"
+    )
+
+
+@dp.message(Command("channel_stats"))
+async def cmd_channel_stats(message: types.Message):
+    """Обработчик команды /channel_stats — только для админа"""
+    # Проверка прав администратора
+    if message.from_user.id != ADMIN_ID:
+        await message.answer("⛔ Доступ запрещён. Эта команда только для администратора.")
+        return
+    
+    # Пытаемся получить количество подписчиков канала
+    try:
+        # Замени на username своего канала (без @)
+        channel_username = "Tactika_Stavok"
+        member_count = await bot.get_chat_member_count(f"@{channel_username}")
+        await message.answer(
+            f"📢 <b>Подписчиков в канале @{channel_username}:</b> <b>{member_count}</b>",
+            parse_mode="HTML"
+        )
+    except Exception as e:
+        await message.answer(
+            f"⚠️ Не удалось получить статистику канала.\n"
+            f"Убедись, что бот добавлен в канал @{channel_username} как администратор.\n\n"
+            f"Ошибка: {e}"
+        )
+
+
 # ==================== ЗАПУСК ====================
+
 async def main():
-    init_db()  # ← ДОБАВЬ ЭТУ СТРОКУ
     print("\n" + "="*50)
     print("🤖 БОТ-ЛАУНЧЕР ЗАПУЩЕН")
     print(f"🔗 Web App URL: {WEBAPP_URL}")
-    print(f"👑 Admin ID: {ADMIN_ID}")  # ← для проверки
+    print(f"👑 Admin ID: {ADMIN_ID}")
     print("="*50 + "\n")
     await dp.start_polling(bot)
+
 
 if __name__ == "__main__":
     import asyncio
