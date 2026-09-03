@@ -3,13 +3,12 @@ import { api } from '../api/client';
 import { useTelegram } from '../hooks/useTelegram';
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
-import { useUserStatus } from '../hooks/useUserStatus';  // ← ДОБАВЬ В НАЧАЛО ФАЙЛА
-
+import { useUserStatus } from '../hooks/useUserStatus';
 
 export function Home() {
   const { user, hapticFeedback } = useTelegram();
+  const { is_admin, has_access, subscription } = useUserStatus();
   const [hotIndex, setHotIndex] = useState(0);
-  const { is_admin, has_access } = useUserStatus();
 
   const { data: hotList, isLoading, isError, refetch } = useQuery({
     queryKey: ['hot-list'],
@@ -20,11 +19,10 @@ export function Home() {
     staleTime: 5 * 60 * 1000,
   });
 
-// Безопасный индекс (защита от выхода за пределы списка)
+  // Безопасный индекс (защита от выхода за пределы списка)
   const safeIndex = hotList && hotList.length > 0 ? hotIndex % hotList.length : 0;
   const hot = hotList?.[safeIndex] ?? null;
   const hasMore = (hotList?.length ?? 0) > 1;
-
   const confidence = Math.round(hot?.hot_confidence ?? 0);
 
   return (
@@ -53,13 +51,11 @@ export function Home() {
         {/* Декоративные круги */}
         <div className="pointer-events-none absolute -top-12 -right-12 w-40 h-40 rounded-full bg-white/10" />
         <div className="pointer-events-none absolute -bottom-16 -left-10 w-44 h-44 rounded-full bg-black/10" />
-
         <div className="relative">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-[17px] font-extrabold text-white">🔥 Горячий прогноз</h2>
+            <h2 className="text-[17px] font-extrabold text-white"> Горячий прогноз</h2>
             <span className="live-badge">LIVE</span>
           </div>
-
           {/* 🆕 БЛОК ОШИБКИ — когда сервер спит */}
           {isError ? (
             <>
@@ -98,7 +94,6 @@ export function Home() {
               <p className="text-white text-lg font-extrabold leading-snug">
                 {hot.home_team} — {hot.away_team}
               </p>
-
               {/* Время матча */}
               {hot.commence_time && (
                 <p className="text-white/50 text-[11px] mt-1">
@@ -110,7 +105,6 @@ export function Home() {
                   })}
                 </p>
               )}
-
               <div className="mt-4 flex items-center gap-4">
                 {/* Кольцо уверенности */}
                 <div className="relative w-[72px] h-[72px] shrink-0">
@@ -127,11 +121,9 @@ export function Home() {
                     {confidence}%
                   </span>
                 </div>
-
                 <div className="min-w-0 flex-1">
                   <p className="text-white text-[15px] font-bold truncate">💎 {hot.hot_bet}</p>
                   <p className="text-white/70 text-[12px] mt-1 leading-snug">{hot.trust_signal}</p>
-
                   {/* Кэфы букмекеров (если есть) */}
                   {hot.odds && hot.odds.home_win && (
                     <div className="flex gap-2 mt-2">
@@ -148,8 +140,7 @@ export function Home() {
                   )}
                 </div>
               </div>
-
-              {/* 🆕 Дополнительные рынки (угловые, карточки) */}
+              {/*  Дополнительные рынки (угловые, карточки) */}
               {hot.additional_markets && hot.additional_markets.length > 0 && (
                 <div className="mt-3 pt-3 border-t border-white/15 space-y-2">
                   <p className="text-white/60 text-[11px] font-bold uppercase tracking-wider">
@@ -183,7 +174,6 @@ export function Home() {
                   </p>
                 </div>
               )}
-
               <Link
                 to={`/prediction?team1=${encodeURIComponent(hot.home_team)}&team2=${encodeURIComponent(hot.away_team)}&league=${hot.league}`}
                 onClick={() => hapticFeedback('medium')}
@@ -191,7 +181,6 @@ export function Home() {
               >
                 Смотреть прогноз →
               </Link>
-              
               {/* 🆕 КНОПКА: следующий hot-прогноз */}
               {hasMore && (
                 <button
@@ -201,7 +190,7 @@ export function Home() {
                   }}
                   className="mt-2 block w-full rounded-xl bg-white/15 text-white text-center text-[14px] font-bold py-2.5 active:scale-[.96] transition-transform"
                 >
-                  🔥 Следующий прогноз ({safeIndex + 1}/{hotList!.length})
+                   Следующий прогноз ({safeIndex + 1}/{hotList!.length})
                 </button>
               )}
             </>
@@ -224,15 +213,32 @@ export function Home() {
 
       {/* ===== Быстрые действия ===== */}
       <div className="grid grid-cols-2 gap-3 animate-fade-up delay-2">
-        <Link to="/prediction" onClick={() => hapticFeedback('light')} className="card action-card">
-          <span className="action-icon bg-blue-500/15">⚽</span>
+        <Link
+          to={has_access || is_admin ? "/prediction" : "/subscribe"}
+          onClick={() => {
+            hapticFeedback('light');
+            if (!has_access && !is_admin) {
+              // Можно добавить toast "Сначала оформи подписку"
+            }
+          }}
+          className="card action-card"
+        >
+          <span className="action-icon bg-blue-500/15"></span>
           <p className="font-bold text-[15px] text-white mt-3">Выбрать матч</p>
-          <p className="text-[12px] text-[#8b9baa] mt-0.5">AI-прогноз на матч</p>
+          <p className="text-[12px] text-[#8b9baa] mt-0.5">
+            {has_access || is_admin ? 'AI-прогноз на матч' : '🔒 По подписке'}
+          </p>
         </Link>
-        <Link to="/stats" onClick={() => hapticFeedback('light')} className="card action-card">
+        <Link
+          to={has_access || is_admin ? "/stats" : "/subscribe"}
+          onClick={() => hapticFeedback('light')}
+          className="card action-card"
+        >
           <span className="action-icon bg-emerald-500/15">📊</span>
           <p className="font-bold text-[15px] text-white mt-3">Статистика</p>
-          <p className="text-[12px] text-[#8b9baa] mt-0.5">Цифры и тренды</p>
+          <p className="text-[12px] text-[#8b9baa] mt-0.5">
+            {has_access || is_admin ? 'Цифры и тренды' : '🔒 По подписке'}
+          </p>
         </Link>
       </div>
 
@@ -240,13 +246,44 @@ export function Home() {
       <section className="card animate-fade-up delay-3 space-y-4">
         <h3 className="font-extrabold text-[15px] text-white">Почему нам доверяют</h3>
         <Benefit icon="🤖" text="Модель v2.3: 12 рынков, включая угловые и карточки" />
-        <Benefit icon="📈" text="ELO-рейтинги и форма команд в реальном времени" />
+        <Benefit icon="" text="ELO-рейтинги и форма команд в реальном времени" />
         <Benefit icon="⚡" text="Мгновенная статистика без ожидания" />
       </section>
 
       {/* ===== CTA подписка ===== */}
-      {/* ===== CTA подписка (скрыт для админа) ===== */}
-      {!is_admin && (
+      {is_admin ? (
+        // 👑 БЛОК ДЛЯ АДМИНА
+        <div className="animate-fade-up delay-4 block card relative overflow-hidden border border-amber-500/30"
+          style={{ background: 'linear-gradient(135deg, rgba(251,191,36,0.1), rgba(245,158,11,0.05))' }}>
+          <div className="flex items-center gap-4">
+            <span className="text-3xl animate-float">👑</span>
+            <div>
+              <p className="font-bold text-white text-[15px]">Администратор</p>
+              <p className="text-[13px] text-[#8b9baa] mt-0.5">Полный доступ ко всему функционалу</p>
+            </div>
+            <span className="ml-auto text-amber-400 text-xl">✓</span>
+          </div>
+        </div>
+      ) : has_access ? (
+        // ✅ ПОЛЬЗОВАТЕЛЬ С ДОСТУПОМ (подписка/trial активна)
+        <div className="animate-fade-up delay-4 block card relative overflow-hidden border border-green-500/30"
+          style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.1), rgba(5,150,105,0.05))' }}>
+          <div className="flex items-center gap-4">
+            <span className="text-3xl animate-float">✅</span>
+            <div>
+              <p className="font-bold text-white text-[15px]">Подписка активна</p>
+              <p className="text-[13px] text-[#8b9baa] mt-0.5">
+                {subscription?.subscription_type === 'trial' ? '🎁 Trial' : '💎 VIP'}
+                {subscription?.subscription_end && (
+                  <> · до {new Date(subscription.subscription_end).toLocaleDateString('ru-RU')}</>
+                )}
+              </p>
+            </div>
+            <span className="ml-auto text-green-400 text-xl">✓</span>
+          </div>
+        </div>
+      ) : (
+        // 🔒 НЕТ ДОСТУПА — показываем CTA
         <Link
           to="/subscribe"
           onClick={() => hapticFeedback('light')}
@@ -262,21 +299,6 @@ export function Home() {
             <span className="ml-auto text-purple-400 text-xl">→</span>
           </div>
         </Link>
-      )}
-
-      {/* 👑 БЛОК ДЛЯ АДМИНА */}
-      {is_admin && (
-        <div className="animate-fade-up delay-4 block card relative overflow-hidden border border-amber-500/30"
-          style={{ background: 'linear-gradient(135deg, rgba(251,191,36,0.1), rgba(245,158,11,0.05))' }}>
-          <div className="flex items-center gap-4">
-            <span className="text-3xl animate-float">👑</span>
-            <div>
-              <p className="font-bold text-white text-[15px]">Администратор</p>
-              <p className="text-[13px] text-[#8b9baa] mt-0.5">Полный доступ ко всему функционалу</p>
-            </div>
-            <span className="ml-auto text-amber-400 text-xl">✓</span>
-          </div>
-        </div>
       )}
     </div>
   );
