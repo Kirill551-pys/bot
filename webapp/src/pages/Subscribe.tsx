@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
 import { useTelegram } from '../hooks/useTelegram';
 import type { UserSubscription } from '../api/client';
+import { LEGAL } from '../config/legal';
 
 export function Subscribe() {
   const { showPopup, hapticFeedback } = useTelegram();
@@ -128,14 +129,29 @@ export function Subscribe() {
               <input 
                 type="checkbox" 
                 required
-                className="mt-1"
+                className="mt-1 w-4 h-4 accent-blue-500"
               />
-              <span className="text-[12px] text-[#8b9baa] leading-snug">
-                Я согласен с{' '}
-                <a href="/privacy" target="_blank" className="text-blue-400 underline">
-                  политикой конфиденциальности
+              <span className="text-[11px] text-[#8b9baa] leading-snug">
+                Я понимаю, что подписка будет автоматически продлеваться, 
+                пока я не отключу автопродление. Отключить можно в один клик. 
+                Согласие фиксируется с датой и временем.{' '}
+                <a 
+                  href={LEGAL.offer} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-400 underline hover:text-blue-300"
+                >
+                  Условия оферты
                 </a>
-                {' '}и даю согласие на обработку персональных данных
+                {' '}и{' '}
+                <a 
+                  href={LEGAL.privacy} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-400 underline hover:text-blue-300"
+                >
+                  политика ПДн
+                </a>
               </span>
             </label>
             <button
@@ -148,6 +164,26 @@ export function Subscribe() {
             >
               💳 Оплатить
             </button>
+            <p className="text-[10px] text-[#8b9baa] leading-relaxed mt-3 text-center">
+              Нажимая «Оплатить», вы принимаете{' '}
+              <a 
+                href={LEGAL.offer} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-blue-400 underline"
+              >
+                условия оферты
+              </a>{' '}
+              и{' '}
+              <a 
+                href={LEGAL.privacy} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-blue-400 underline"
+              >
+                политику ПДн
+              </a>.
+            </p>
           </div>
         ))}
       </div>

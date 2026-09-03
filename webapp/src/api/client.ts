@@ -356,6 +356,30 @@ class ApiClient {
     }
   }
 
+  /**  Информация о текущем пользователе (включая статус админа) */
+  async getMe(): Promise<{
+    id: number;
+    first_name: string;
+    username?: string;
+    is_admin: boolean;
+    subscription: any;
+    has_access: boolean;
+  }> {
+    try {
+      const response = await this.client.get('/api/user/me');
+      return response.data;
+    } catch (error) {
+      console.error('Ошибка получения информации о пользователе:', error);
+      return {
+        id: 0,
+        first_name: '',
+        is_admin: false,
+        subscription: null,
+        has_access: false,
+      };
+    }
+  }
+
   async activateTrial(): Promise<{ success: boolean; message: string }> {
     try {
       const response = await this.client.post<{ success: boolean; message: string }>(

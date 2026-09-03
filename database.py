@@ -246,3 +246,100 @@ def get_user_payments(user_id: int, limit: int = 10) -> List[Dict]:
             LIMIT ?
         ''', (user_id, limit)).fetchall()
     return [dict(r) for r in rows]
+
+# ==================== ПРОВЕРКА ПОДПИСКИ (PAYWALL) ====================
+
+def is_subscription_active(user_id: int) -> bool:
+    """
+    Проверяет, есть ли у пользователя активная подписка ИЛИ trial.
+    Администратор (ADMIN_ID) всегда имеет полный доступ.
+    """
+    from config import ADMIN_ID
+    
+    #  АДМИН ВСЕГДА ИМЕЕТ ДОСТУП
+    if user_id == ADMIN_ID:
+        return True
+    
+    with _get_connection() as conn:
+        row = conn.execute(
+            '''SELECT is_active, subscription_type, subscription_end 
+               FROM subscribers WHERE user_id = ?''',
+            (user_id,)
+        ).fetchone()
+    
+    if not row:
+        return False
+    
+    is_active, sub_type, sub_end = row
+    
+    if not is_active:
+        return False
+    
+    if sub_end:
+        try:
+            from datetime import datetime, timezone
+            for fmt in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%S%z']:
+                try:
+                    end_dt = datetime.strptime(sub_end, fmt)
+                    if end_dt.tzinfo is None:
+                        end_dt = end_dt.replace(tzinfo=timezone.utc)
+                    if end_dt < datetime.now(timezone.utc):
+                        return False
+                    break
+                except ValueError:
+                    continue
+        except Exception:
+            pass
+    
+    return True
+
+
+def get_subscription_info(user_id: int) -> dict:
+    """
+    Возвращает подробную информацию о подписке для фронтенда.
+    Используется на странице /subscribe и для проверки доступа.
+    """
+    with _get_connection() as conn:
+        row = conn.execute(
+            '''SELECT user_id, username, first_name, subscription_type, 
+                      subscription_start, subscription_end, trial_used, 
+                      is_active, created_at
+               FROM subscribers WHERE user_id = ?''',
+            (user_id,)
+        ).fetchone()
+    
+    if not row:
+        return {
+            'subscription_type': 'free',
+            'is_active': False,
+            'days_left': 0,
+            'trial_available': True
+        }
+    
+    # Преобразуем строку в dict
+    sub = dict(row)
+    
+    # Считаем дни до конца подписки
+    days_left = 0
+    if sub.get('subscription_end'):
+        try:
+            from datetime import datetime, timezone
+            for fmt in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%S%z']:
+                try:
+                    end_dt = datetime.strptime(sub['subscription_end'], fmt)
+                    if end_dt.tzinfo is None:
+                        end_dt = end_dt.replace(tzinfo=timezone.utc)
+                    delta = end_dt - datetime.now(timezone.utc)
+                    days_left = max(0, delta.days)
+                    break
+                except ValueError:
+                    continue
+        except Exception:
+            pass
+    
+    sub['days_left'] = days_left
+    
+    # Проверяем, доступен ли trial
+    sub['trial_available'] = not bool(sub.get('trial_used', 0))
+    
+    return sub

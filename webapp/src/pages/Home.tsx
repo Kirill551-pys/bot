@@ -3,10 +3,13 @@ import { api } from '../api/client';
 import { useTelegram } from '../hooks/useTelegram';
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
+import { useUserStatus } from '../hooks/useUserStatus';  // ← ДОБАВЬ В НАЧАЛО ФАЙЛА
+
 
 export function Home() {
   const { user, hapticFeedback } = useTelegram();
   const [hotIndex, setHotIndex] = useState(0);
+  const { is_admin, has_access } = useUserStatus();
 
   const { data: hotList, isLoading, isError, refetch } = useQuery({
     queryKey: ['hot-list'],
@@ -32,6 +35,12 @@ export function Home() {
           <p className="text-[13px] font-medium text-[#8b9baa]">⚽ Тактика Ставок</p>
           <h1 className="text-[22px] leading-tight font-extrabold text-white mt-0.5">
             Привет, {user?.first_name ?? 'друг'}! 👋
+            {/* 👑 БЕЙДЖ АДМИНА */}
+            {is_admin && (
+              <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-yellow-500 to-amber-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-lg shadow-amber-500/30">
+                👑 Админ
+              </span>
+            )}
           </h1>
         </div>
         <div className="w-11 h-11 shrink-0 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 text-white text-lg font-extrabold flex items-center justify-center shadow-lg shadow-blue-500/20">
@@ -236,21 +245,39 @@ export function Home() {
       </section>
 
       {/* ===== CTA подписка ===== */}
-      <Link
-        to="/subscribe"
-        onClick={() => hapticFeedback('light')}
-        className="animate-fade-up delay-4 block card relative overflow-hidden border border-purple-500/20"
-        style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.1), rgba(59,130,246,0.05))' }}
-      >
-        <div className="flex items-center gap-4">
-          <span className="text-3xl animate-float">💎</span>
-          <div>
-            <p className="font-bold text-white text-[15px]">Открой все прогнозы</p>
-            <p className="text-[13px] text-[#8b9baa] mt-0.5">Подписка от 149₽/нед</p>
+      {/* ===== CTA подписка (скрыт для админа) ===== */}
+      {!is_admin && (
+        <Link
+          to="/subscribe"
+          onClick={() => hapticFeedback('light')}
+          className="animate-fade-up delay-4 block card relative overflow-hidden border border-purple-500/20"
+          style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.1), rgba(59,130,246,0.05))' }}
+        >
+          <div className="flex items-center gap-4">
+            <span className="text-3xl animate-float">💎</span>
+            <div>
+              <p className="font-bold text-white text-[15px]">Открой все прогнозы</p>
+              <p className="text-[13px] text-[#8b9baa] mt-0.5">Подписка от 149₽/нед</p>
+            </div>
+            <span className="ml-auto text-purple-400 text-xl">→</span>
           </div>
-          <span className="ml-auto text-purple-400 text-xl">→</span>
+        </Link>
+      )}
+
+      {/* 👑 БЛОК ДЛЯ АДМИНА */}
+      {is_admin && (
+        <div className="animate-fade-up delay-4 block card relative overflow-hidden border border-amber-500/30"
+          style={{ background: 'linear-gradient(135deg, rgba(251,191,36,0.1), rgba(245,158,11,0.05))' }}>
+          <div className="flex items-center gap-4">
+            <span className="text-3xl animate-float">👑</span>
+            <div>
+              <p className="font-bold text-white text-[15px]">Администратор</p>
+              <p className="text-[13px] text-[#8b9baa] mt-0.5">Полный доступ ко всему функционалу</p>
+            </div>
+            <span className="ml-auto text-amber-400 text-xl">✓</span>
+          </div>
         </div>
-      </Link>
+      )}
     </div>
   );
 }

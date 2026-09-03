@@ -21,11 +21,12 @@ from model import (
 from database import (
     create_user, get_user_subscription, activate_subscription,
     is_trial_available, use_trial, add_referral, get_referral_count,
-    init_db
+    init_db, get_subscription_info 
 )
 from config import (
     LEAGUES, SUBSCRIPTION_PRICES, REFERRAL_FREE_DAYS,
-    LEAGUE_TIERS, HOT_MIN_CONFIDENCE, ODDS_ACTIVE_LEAGUES, CONF_THRESHOLD
+    LEAGUE_TIERS, HOT_MIN_CONFIDENCE, ODDS_ACTIVE_LEAGUES, CONF_THRESHOLD,
+    ADMIN_ID
 )
 from auth import verify_telegram_init_data
 from team_aliases import normalize_team_name
@@ -175,6 +176,35 @@ def debug_info():
 def get_current_user(x_telegram_init_data: str = Header(None, alias="X-Telegram-Init-Data")) -> dict:
     return verify_telegram_init_data(x_telegram_init_data)
 
+# ==================== ЗАЩИТА ПОДПИСКОЙ (PAYWALL) ====================
+
+def require_subscription(user: dict = Depends(get_current_user)) -> dict:
+    """
+    Dependency-функция для защиты эндпоинтов подпиской.
+     Администратор (ADMIN_ID) всегда имеет полный доступ.
+    """
+    from database import is_subscription_active
+    
+    user_id = user.get('id')
+    if not user_id:
+        raise HTTPException(status_code=401, detail="User ID not found")
+    
+    # 👑 АДМИН ВСЕГДА ПРОХОДИТ (даже если DEV_MODE=false)
+    if user_id == ADMIN_ID:
+        return user
+    
+    # В режиме разработки пропускаем всех остальных
+    if os.getenv("DEV_MODE", "true").lower() == "true":
+        return user
+    
+    # Проверяем подписку
+    if not is_subscription_active(user_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Subscription required. Please activate trial or subscription."
+        )
+    
+    return user
 
 # ==================== PYDANTIC МОДЕЛИ ====================
 class MatchRequest(BaseModel):
@@ -286,7 +316,7 @@ def get_teams(league: str, user: dict = Depends(get_current_user)):
 
 # ==================== ENDPOINTS: ПРОГНОЗ МАТЧА ====================
 @app.post("/api/predictions/match", response_model=PredictionResponse)
-def get_match_prediction(req: MatchRequest, user: dict = Depends(get_current_user)):
+def get_match_prediction(req: MatchRequest, user: dict = Depends(require_subscription)):
     if req.league not in MODELS:
         raise HTTPException(status_code=404, detail="League not found")
     
@@ -642,7 +672,7 @@ def get_hot_prediction(user: dict = Depends(get_current_user)):
 
 
 @app.get("/api/predictions/hot/list")
-def get_hot_prediction_list(user: dict = Depends(get_current_user)):
+def get_hot_prediction_list(user: dict = Depends(require_subscription)):
     """🆕 ТОП-5 hot-прогнозов для кнопки «Следующий»"""
     hot_list = _collect_hot_predictions(limit=5)
     if not hot_list:
@@ -694,7 +724,7 @@ def get_top_teams(
     league: str,
     stat_type: str = "corners",
     top_n: int = 3,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_subscription)
 ):
     if league not in MODELS:
         raise HTTPException(status_code=404, detail="League not found")
@@ -706,7 +736,7 @@ def get_top_teams(
 
 
 @app.get("/api/stats/{league}/{team}", response_model=TeamStatsResponse)
-def get_team_stats(league: str, team: str, user: dict = Depends(get_current_user)):
+def get_team_stats(league: str, team: str, user: dict = Depends(require_subscription)):
     if league not in MODELS:
         raise HTTPException(status_code=404, detail="League not found")
     df = MODELS[league].get('df')
@@ -729,17 +759,74 @@ def get_available_seasons(league: str, user: dict = Depends(get_current_user)):
     return sorted(df['season'].unique().tolist())
 
 
-# ==================== ENDPOINTS: ПОЛЬЗОВАТЕЛЬ ====================
 @app.get("/api/user/subscription")
 def get_subscription(user: dict = Depends(get_current_user)):
+    """Возвращает информацию о подписке. НЕ требует активной подписки."""
+    from database import is_subscription_active
+    
     user_id = user['id']
     create_user(user_id, user.get('username'), user.get('first_name'))
     
-    sub = get_user_subscription(user_id)
-    if not sub:
-        return {'subscription_type': 'free', 'is_active': False}
-    return sub
+    sub_info = get_subscription_info(user_id)
+    
+    # 🆕 АВТОАКТИВАЦИЯ TRIAL при первом входе
+    # Если trial доступен и подписки нет — активируем автоматически
+    if (sub_info.get('trial_available') and 
+        not sub_info.get('is_active') and
+        sub_info.get('subscription_type') == 'free'):
+        
+        try:
+            activate_subscription(user_id, 'trial', 3)
+            use_trial(user_id)
+            # Перечитываем информацию после активации
+            sub_info = get_subscription_info(user_id)
+            sub_info['trial_just_activated'] = True
+        except Exception as e:
+            logger.warning(f"️ Не удалось активировать trial для user {user_id}: {e}")
+    
+    return sub_info
 
+@app.get("/api/user/me")
+def get_current_user_info(user: dict = Depends(get_current_user)):
+    """
+    Возвращает информацию о текущем пользователе.
+    Используется фронтом для определения: админ ли это, показывать ли кнопку оплаты.
+    """
+    user_id = user.get('id')
+    
+    # Создаём пользователя в БД если его ещё нет
+    create_user(user_id, user.get('username'), user.get('first_name'))
+    
+    # Получаем статус подписки
+    from database import is_subscription_active, get_subscription_info
+    sub_info = get_subscription_info(user_id)
+    
+    return {
+        'id': user_id,
+        'first_name': user.get('first_name'),
+        'username': user.get('username'),
+        'is_admin': user_id == ADMIN_ID,  # 👑 КЛЮЧЕВОЕ ПОЛЕ
+        'subscription': sub_info,
+        'has_access': is_subscription_active(user_id),
+    }
+
+@app.get("/api/user/check-access")
+def check_access(user: dict = Depends(get_current_user)):
+    """
+    Быстрая проверка доступа. Используется фронтендом для paywall.
+    Возвращает статус без полной информации о подписке.
+    """
+    from database import is_subscription_active
+    
+    user_id = user['id']
+    create_user(user_id, user.get('username'), user.get('first_name'))
+    
+    is_active = is_subscription_active(user_id)
+    
+    return {
+        'has_access': is_active,
+        'user_id': user_id
+    }
 
 @app.post("/api/user/trial")
 def activate_trial(user: dict = Depends(get_current_user)):
