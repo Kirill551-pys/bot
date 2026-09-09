@@ -608,16 +608,57 @@ def predict_match(team1: str, team2: str, model_data: dict, ratings_dict: dict =
             f'{team2} Under 1.5': round(1.0 - away_over_15, 3)
         }
         
-        # Рекомендация
-        rec = []
+            # 🧠 УМНОЕ ОБОСНОВАНИЕ РЕКОМЕНДАЦИИ
+        rec_reasons = []
+    
+        # 1. Анализ исхода матча
         if 'result' in prediction:
-            if prediction['result'][HOME_WIN] > 0.48: rec.append(f"🔴 Фаворит: {team1}")
-            elif prediction['result'][AWAY_WIN] > 0.48: rec.append(f"🔵 Фаворит: {team2}")
-        if 'total_goals' in prediction and prediction['total_goals'][OVER_25] > 0.65:
-            rec.append("⚽ Ожидается ТБ 2.5")
+            max_prob = max(prediction['result'].values())
+            if prediction['result'][HOME_WIN] == max_prob and max_prob > 0.45:
+                reason = f"🔴 {team1} выглядит фаворитом"
+                if home_metrics.get('form_avg', 0) > 2.0:
+                    reason += f" (отличная форма: {home_metrics['form_avg']:.1f} очка за последние матчи)"
+                if home_rating > away_rating + 100:
+                    reason += f" (превосходство в классе: ELO {home_rating:.0f} против {away_rating:.0f})"
+                rec_reasons.append(reason + ".")
             
-        prediction['recommendation'] = "\n".join(rec) if rec else "📊 Тактически сложный матч"
-        prediction['trust_signal'] = get_trust_signal(prediction)
+            elif prediction['result'][AWAY_WIN] == max_prob and max_prob > 0.45:
+                reason = f"🔵 {team2} имеет высокие шансы на победу"
+                if away_metrics.get('form_avg', 0) > 2.0:
+                    reason += f" (гости в сильной форме: {away_metrics['form_avg']:.1f} очка за матч)"
+                rec_reasons.append(reason + ".")
+            
+            elif max_prob < 0.45 or prediction['result'][DRAW] == max_prob:
+                rec_reasons.append("📊 Ожидается упорная борьба, высока вероятность ничьей или минимальной разницы в счете.")
+
+        # 2. Анализ голов (Тоталы)
+        if 'total_goals' in prediction:
+            if prediction['total_goals'][OVER_25] > 0.60:
+                reason = "⚽ Высока вероятность тотала больше 2.5"
+                combined_avg = home_metrics.get('avg_scored', 0) + away_metrics.get('avg_scored', 0)
+                if combined_avg > 2.5:
+                    reason += f" (команды в сумме забивают в среднем {combined_avg:.1f} гола)"
+                rec_reasons.append(reason + ".")
+            elif prediction['total_goals'][UNDER_25] > 0.60:
+                rec_reasons.append("🛡️ Ожидается закрытый, низовой матч с минимумом голов (ТМ 2.5).")
+
+        # 3. Дополнительные тактические факторы
+        home_rest = home_metrics.get('rest_days', 7)
+        away_rest = away_metrics.get('rest_days', 7)
+        if home_rest < 4 and away_rest >= 7:
+            rec_reasons.append(f"⚠️ {team1} играет на коротком отдыхе ({home_rest} дн.), что дает физическое преимущество гостям.")
+        elif away_rest < 4 and home_rest >= 7:
+            rec_reasons.append(f"⚠️ {team2} играет на коротком отдыхе ({away_rest} дн.), фактор усталости в пользу хозяев.")
+        
+        if 'both_scored' in prediction and prediction['both_scored']['Yes'] > 0.60:
+            rec_reasons.append("🔥 Обе команды имеют уязвимую оборону и высокую вероятность забить (ОЗ - Да).")
+
+        # Формируем итоговый текст с переносами строк для красивого отображения
+        if rec_reasons:
+            prediction['recommendation'] = "🧠 **Обоснование прогноза:**\n• " + "\n• ".join(rec_reasons)
+        else:
+            prediction['recommendation'] = "📊 Тактически сложный матч. Модель не видит явного статистического перевеса одной из сторон, рекомендуем воздержаться или выбрать альтернативные рынки (угловые, карточки)."
+            prediction['trust_signal'] = get_trust_signal(prediction)
 
         # 🔥 УМНЫЙ ПОИСК САМОЙ УВЕРЕННОЙ СТАВКИ
         market_to_tier = {}

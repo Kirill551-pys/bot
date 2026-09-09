@@ -14,7 +14,7 @@ export function Prediction() {
     china: 'S', finland: 'S', dania: 'S', epl: 'S',
     seriaA: 'S', poland: 'S', eredivisise: 'S', rpl: 'S',
     norway: 'B', brazil: 'B', turkey: 'B', belgium: 'B',
-    bundesliga: 'B', mexico: 'B', romania: 'B',
+    bundesliga: 'B', champions_league: 'S', mexico: 'B', romania: 'B',
     argentina: 'C', usa: 'C', japan: 'C', austria: 'C', ligue1: 'C',
   };
 

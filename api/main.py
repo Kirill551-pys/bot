@@ -3,6 +3,8 @@ from fastapi import FastAPI, Depends, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
+from auth import verify_telegram_init_data # Твоя функция проверки
+
 import sys
 import os
 import logging
@@ -46,6 +48,48 @@ HOT_CACHE: dict = {
 }
 HOT_CACHE_TTL = 30 * 60     # 30 минут в секундах    # Время жизни кэша: 5 минут (300 секунд)
 
+# ==================== main.py ====================
+# ... существующие импорты ...
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from fastapi import Request
+from fastapi.responses import JSONResponse
+
+from auth import verify_telegram_init_data # Твоя функция проверки
+
+def get_user_id_or_ip(request: Request) -> str:
+    """
+    Пытаемся достать Telegram User ID из заголовка. 
+    Если не получилось (или это не авторизованный запрос) — падаем на IP.
+    """
+    init_data = request.headers.get("X-Telegram-Init-Data")
+    if init_data:
+        try:
+            user = verify_telegram_init_data(init_data)
+            if user and 'id' in user:
+                return f"user_{user['id']}" # Лимит будет привязан к ID
+        except Exception:
+            pass
+            
+    # Fallback на IP
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+# Инициализируем с новой функцией
+limiter = Limiter(key_func=get_user_id_or_ip)
+
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(
+        status_code=429,
+        content={
+            "detail": "🛑 Слишком много запросов. Пожалуйста, подождите перед следующей попыткой.",
+            "retry_after": exc.detail.split(" ")[-1] if exc.detail else "60" # Парсим время ожидания
+        },
+        headers={"Retry-After": "60"}
+    )
 
 def get_hot_cached() -> list:
     """
@@ -358,7 +402,8 @@ class TeamStatsResponse(BaseModel):
 
 # ==================== ENDPOINTS: ЛИГИ ====================
 @app.get("/api/leagues", response_model=List[LeagueResponse])
-def get_leagues(user: dict = Depends(get_current_user)):
+@limiter.limit("60/minute")
+def get_leagues(request: Request, user: dict = Depends(get_current_user)):
     result = []
     for key, name in LEAGUES.items():
         if key in MODELS:
@@ -375,7 +420,8 @@ def get_leagues(user: dict = Depends(get_current_user)):
 
 
 @app.get("/api/leagues/{league}/teams", response_model=List[str])
-def get_teams(league: str, user: dict = Depends(get_current_user)):
+@limiter.limit("60/minute")
+def get_teams(request: Request, league: str, user: dict = Depends(get_current_user)):
     if league not in MODELS:
         raise HTTPException(status_code=404, detail="League not found")
     
@@ -389,12 +435,15 @@ def get_teams(league: str, user: dict = Depends(get_current_user)):
 
 # ==================== ENDPOINTS: ПРОГНОЗ МАТЧА ====================
 @app.post("/api/predictions/match", response_model=PredictionResponse)
-def get_match_prediction(req: MatchRequest, user: dict = Depends(require_subscription)):
+@limiter.limit("5/minute")  # 🛡️ СТРОГИЙ ЛИМИТ: 5 запросов в минуту
+def get_match_prediction(request: Request, req: MatchRequest, user: dict = Depends(get_current_user)):
+    # ⚠️ ВНИМАНИЕ: В функцию обязательно нужно добавить аргумент `request: Request`, 
+    # иначе slowapi не сможет отследить запрос!
+    
     if req.league not in MODELS:
         raise HTTPException(status_code=404, detail="League not found")
     
     model_info = MODELS[req.league]
-    
     prediction = predict_match(
         team1=req.team1,
         team2=req.team2,
@@ -405,10 +454,9 @@ def get_match_prediction(req: MatchRequest, user: dict = Depends(require_subscri
     
     if 'error' in prediction:
         raise HTTPException(status_code=400, detail=prediction['error'])
-    
+        
     prediction['league_tier'] = LEAGUE_TIERS.get(req.league, 'C')
     return PredictionResponse(**prediction)
-
 
 # ==================== HOT: ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
 
@@ -872,7 +920,8 @@ def _collect_hot_predictions(limit: int = 5) -> List[dict]:
 # ==================== ENDPOINTS: HOT ====================
 
 @app.get("/api/predictions/hot")
-def get_hot_prediction(user: dict = Depends(get_current_user)):
+@limiter.limit("3/minute")
+def get_hot_prediction(request: Request, user: dict = Depends(get_current_user)):
     """
     Лучший hot-прогноз (главная карточка) — с кэшем.
     
@@ -886,7 +935,8 @@ def get_hot_prediction(user: dict = Depends(get_current_user)):
 
 
 @app.get("/api/predictions/hot/list")
-def get_hot_prediction_list(user: dict = Depends(get_current_user)):
+@limiter.limit("10/minute") 
+def get_hot_prediction_list(request: Request, user: dict = Depends(get_current_user)):
     """
     ТОП-5 hot-прогнозов для кнопки «Следующий» — с кэшем.
     
@@ -1047,7 +1097,8 @@ def check_access(user: dict = Depends(get_current_user)):
     }
 
 @app.post("/api/user/trial")
-def activate_trial(user: dict = Depends(get_current_user)):
+@limiter.limit("2/minute")
+def activate_trial(request: Request, user: dict = Depends(get_current_user)):
     user_id = user['id']
     if not is_trial_available(user_id):
         raise HTTPException(status_code=400, detail="Trial already used")

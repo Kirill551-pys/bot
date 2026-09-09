@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useTelegram } from './hooks/useTelegram';
 import { setupAuth } from './api/client';
 import { Home } from './pages/Home';
+import { Toaster } from 'react-hot-toast';
 import { Prediction } from './pages/Prediction';
 import { Stats } from './pages/Stats';
 import { Subscribe } from './pages/Subscribe';
@@ -102,6 +103,28 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <ScrollToTop />
+
+          <Toaster
+            position="top-center"
+            toastOptions={{
+              style: {
+                background: '#1e2d3d', // Цвет карточки (из твоего globals.css)
+                color: '#e8edf2',      // Цвет текста
+                border: '1px solid #f97316', // Оранжевая рамка (tg-accent) для привлечения внимания
+                borderRadius: '12px',
+                fontSize: '14px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+              },
+              success: {
+                iconTheme: { primary: '#10b981', secondary: '#1e2d3d' },
+              },
+              error: {
+                iconTheme: { primary: '#ef4444', secondary: '#1e2d3d' },
+              },
+            }}
+          />
+
+          
           {/* ✅ ИЗМЕНЕНИЕ 2: pb-28 — запас под меню + safe-area */}
           <div className="min-h-screen bg-[#0f1923] pb-28 safe-top">
             <Routes>

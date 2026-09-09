@@ -1,5 +1,6 @@
 import axios from 'axios';
 import type { AxiosInstance, AxiosError } from 'axios';
+import toast from 'react-hot-toast'; // 🆕 Статический импорт (надёжнее динамического)
 
 // ==================== ТИПЫ ДАННЫХ ====================
 
@@ -210,13 +211,38 @@ class ApiClient {
     );
 
     // Интерцептор для обработки ошибок
+    // 🛡️ УМНЫЙ ИНТЕРЦЕПТОР: Ловит 429 и показывает Toast
     this.client.interceptors.response.use(
       (response) => response,
-      (error: AxiosError) => {
-        console.error('API Error:', error.response?.data || error.message);
-        return Promise.reject(error);
+      (error: AxiosError<{ detail?: string }>) => {
+        const status = error.response?.status;
+        const detail = error.response?.data?.detail;
+
+        // 1. Обработка Rate Limiting (429 Too Many Requests)
+        if (status === 429) {
+          const msg = detail || "🛑 Слишком много запросов. Подождите минуту.";
+          toast.error(msg, {
+            icon: '🛑',
+            duration: 5000,
+            style: {
+              background: '#1e2d3d',
+              color: '#e8edf2',
+              border: '1px solid #f97316',
+            },
+          });
+          console.warn('🛑 Rate Limit Exceeded:', msg);
+      } else if (status === 401) {
+        console.error('❌ Ошибка авторизации Telegram');
+        toast.error('Сессия истекла. Перезапустите приложение.', { icon: '🔒' });
+      } 
+      // 3. Остальные ошибки (500, 404 и т.д.)
+      else {
+        console.error('API Error:', detail || error.message);
       }
-    );
+
+      return Promise.reject(error);
+    }
+  );
   }
 
   setInitData(initData: string) {
