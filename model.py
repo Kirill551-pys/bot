@@ -498,15 +498,27 @@ def predict_match(team1: str, team2: str, model_data: dict, ratings_dict: dict =
         le_home, le_away = model_data['le_home'], model_data['le_away']
         scaler, final_ratings = model_data['scaler'], model_data.get('final_ratings', {})
         all_teams = list(le_home.classes_)
-        
         for team, var_name in [(team1, "team1"), (team2, "team2")]:
             if team not in all_teams:
-                found = find_similar_team(team, all_teams, threshold=0.65)
+                # 🔥 СНИЗИЛИ порог с 0.65 до 0.60 для большей гибкости
+                found = find_similar_team(team, all_teams, threshold=0.60)
                 if found:
+                    logger.info(f"✅ Автоисправление названия: '{team}' -> '{found}'")
                     if var_name == "team1": team1 = found
                     else: team2 = found
                 else:
-                    return {"error": f"Команда не найдена: '{team}'"}
+                    # 🔥 ДЕТАЛЬНЫЙ ЛОГ ОШИБКИ: покажет нам, что именно пошло не так
+                    logger.error(f"❌ КОМАНДА НЕ НАЙДЕНА: '{team}' (переменная: {var_name})")
+                    logger.error(f"   Всего команд в базе этой лиги: {len(all_teams)}")
+                    logger.error(f"   Примеры команд в базе (первые 15): {all_teams[:15]}")
+                
+                    # Ищем ближайшие совпадения вручную для лога, чтобы понять, почему не сработало
+                    from difflib import get_close_matches
+                    close = get_close_matches(team, all_teams, n=3, cutoff=0.4)
+                    if close:
+                        logger.error(f"   Возможно, вы имели в виду: {close}")
+                    
+                    return {"error": f"Команда '{team}' не найдена в этой лиге. Проверьте название и выбранную лигу."}
         
         current_date = datetime.now()
         home_metrics = calculate_team_metrics(all_matches_df, team1, current_date) if all_matches_df is not None else {}

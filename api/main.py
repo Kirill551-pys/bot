@@ -437,6 +437,9 @@ def get_teams(request: Request, league: str, user: dict = Depends(get_current_us
 def get_match_prediction(request: Request, req: MatchRequest, user: dict = Depends(require_subscription)):    # ⚠️ ВНИМАНИЕ: В функцию обязательно нужно добавить аргумент `request: Request`, 
     # иначе slowapi не сможет отследить запрос!
     
+    logger.info(f"📥 ЗАПРОС ПРОГНОЗА: team1='{req.team1}', team2='{req.team2}', league='{req.league}'")
+
+
     if req.league not in MODELS:
         raise HTTPException(status_code=404, detail="League not found")
 
