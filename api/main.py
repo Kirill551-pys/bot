@@ -433,32 +433,39 @@ def get_teams(request: Request, league: str, user: dict = Depends(get_current_us
 
 # ==================== ENDPOINTS: ПРОГНОЗ МАТЧА ====================
 @app.post("/api/predictions/match", response_model=PredictionResponse)
-@limiter.limit("30/minute")  # 🛡️ СТРОГИЙ ЛИМИТ: 5 запросов в минуту
-def get_match_prediction(request: Request, req: MatchRequest, user: dict = Depends(require_subscription)):    # ⚠️ ВНИМАНИЕ: В функцию обязательно нужно добавить аргумент `request: Request`, 
-    # иначе slowapi не сможет отследить запрос!
+@limiter.limit("30/minute")  # Увеличили лимит
+def get_match_prediction(request: Request, req: MatchRequest, user: dict = Depends(get_current_user)):
+    # 🔥 Логируем запрос, чтобы видеть, что присылает фронтенд
+    logger.info(f"📥 ЗАПРОС: team1='{req.team1}', team2='{req.team2}', league='{req.league}'")
     
-    logger.info(f"📥 ЗАПРОС ПРОГНОЗА: team1='{req.team1}', team2='{req.team2}', league='{req.league}'")
-
-
     if req.league not in MODELS:
-        raise HTTPException(status_code=404, detail="League not found")
-
-    clean_team1 = normalize_team_name(req.team1)
-    clean_team2 = normalize_team_name(req.team2)
+        raise HTTPException(status_code=404, detail=f"Лига '{req.league}' не найдена. Доступные: {list(MODELS.keys())}")
     
     model_info = MODELS[req.league]
+    
+    # Нормализация имён (если есть team_aliases)
+    try:
+        from team_aliases import normalize_team_name
+        clean_team1 = normalize_team_name(req.team1)
+        clean_team2 = normalize_team_name(req.team2)
+    except ImportError:
+        clean_team1 = req.team1.strip()
+        clean_team2 = req.team2.strip()
+    
+    logger.info(f"🔄 После нормализации: team1='{clean_team1}', team2='{clean_team2}'")
+    
     prediction = predict_match(
-        team1=req.team1,
-        team2=req.team2,
+        team1=clean_team1,
+        team2=clean_team2,
         model_data=model_info['model_data'],
         ratings_dict=model_info.get('ratings', {}),
         all_matches_df=model_info['df']
     )
     
     if 'error' in prediction:
-        logger.warning(f"⚠️ Ошибка прогноза: {prediction['error']} | Запрошено: {req.team1} vs {req.team2} | Нормализовано: {clean_team1} vs {clean_team2}")
+        logger.warning(f"⚠️ Ошибка прогноза: {prediction['error']}")
         raise HTTPException(status_code=400, detail=prediction['error'])
-        
+    
     prediction['league_tier'] = LEAGUE_TIERS.get(req.league, 'C')
     return PredictionResponse(**prediction)
 
