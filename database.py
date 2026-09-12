@@ -159,6 +159,8 @@ def use_trial(user_id: int) -> None:
 def is_trial_available(user_id: int) -> bool:
     with _get_connection() as conn:
         row = conn.execute('SELECT trial_used FROM subscribers WHERE user_id = ?', (user_id,)).fetchone()
+        if row is None:
+            return True
     return bool(row and row[0] == 0)
 
 def add_referral(referrer_id: int, referred_id: int) -> None:

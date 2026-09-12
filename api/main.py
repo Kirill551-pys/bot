@@ -309,16 +309,14 @@ def require_subscription(user: dict = Depends(get_current_user)) -> dict:
     # 👑 АДМИН ВСЕГДА ПРОХОДИТ (даже если DEV_MODE=false)
     if user_id == ADMIN_ID:
         return user
-    
-    # В режиме разработки пропускаем всех остальных
-    if os.getenv("DEV_MODE", "true").lower() == "true":
-        return user
-    
+
+    create_user(user_id, user.get('username'), user.get('first_name'))
+
     # Проверяем подписку
     if not is_subscription_active(user_id):
         raise HTTPException(
             status_code=403,
-            detail="Subscription required. Please activate trial or subscription."
+            detail="Для доступа к прогнозам необходима активная подписка или пробный период."
         )
     
     return user
@@ -435,13 +433,15 @@ def get_teams(request: Request, league: str, user: dict = Depends(get_current_us
 
 # ==================== ENDPOINTS: ПРОГНОЗ МАТЧА ====================
 @app.post("/api/predictions/match", response_model=PredictionResponse)
-@limiter.limit("5/minute")  # 🛡️ СТРОГИЙ ЛИМИТ: 5 запросов в минуту
-def get_match_prediction(request: Request, req: MatchRequest, user: dict = Depends(get_current_user)):
-    # ⚠️ ВНИМАНИЕ: В функцию обязательно нужно добавить аргумент `request: Request`, 
+@limiter.limit("30/minute")  # 🛡️ СТРОГИЙ ЛИМИТ: 5 запросов в минуту
+def get_match_prediction(request: Request, req: MatchRequest, user: dict = Depends(require_subscription)):    # ⚠️ ВНИМАНИЕ: В функцию обязательно нужно добавить аргумент `request: Request`, 
     # иначе slowapi не сможет отследить запрос!
     
     if req.league not in MODELS:
         raise HTTPException(status_code=404, detail="League not found")
+
+    clean_team1 = normalize_team_name(req.team1)
+    clean_team2 = normalize_team_name(req.team2)
     
     model_info = MODELS[req.league]
     prediction = predict_match(
@@ -453,6 +453,7 @@ def get_match_prediction(request: Request, req: MatchRequest, user: dict = Depen
     )
     
     if 'error' in prediction:
+        logger.warning(f"⚠️ Ошибка прогноза: {prediction['error']} | Запрошено: {req.team1} vs {req.team2} | Нормализовано: {clean_team1} vs {clean_team2}")
         raise HTTPException(status_code=400, detail=prediction['error'])
         
     prediction['league_tier'] = LEAGUE_TIERS.get(req.league, 'C')
@@ -921,7 +922,7 @@ def _collect_hot_predictions(limit: int = 5) -> List[dict]:
 
 @app.get("/api/predictions/hot")
 @limiter.limit("3/minute")
-def get_hot_prediction(request: Request, user: dict = Depends(get_current_user)):
+def get_hot_prediction(request: Request, user: dict = Depends(require_subscription)):
     """
     Лучший hot-прогноз (главная карточка) — с кэшем.
     
@@ -936,7 +937,7 @@ def get_hot_prediction(request: Request, user: dict = Depends(get_current_user))
 
 @app.get("/api/predictions/hot/list")
 @limiter.limit("10/minute") 
-def get_hot_prediction_list(request: Request, user: dict = Depends(get_current_user)):
+def get_hot_prediction_list(request: Request, user: dict = Depends(require_subscription)):
     """
     ТОП-5 hot-прогнозов для кнопки «Следующий» — с кэшем.
     
@@ -1100,6 +1101,9 @@ def check_access(user: dict = Depends(get_current_user)):
 @limiter.limit("2/minute")
 def activate_trial(request: Request, user: dict = Depends(get_current_user)):
     user_id = user['id']
+
+    create_user(user_id, user.get('username'), user.get('first_name'))
+
     if not is_trial_available(user_id):
         raise HTTPException(status_code=400, detail="Trial already used")
     activate_subscription(user_id, 'trial', 3)

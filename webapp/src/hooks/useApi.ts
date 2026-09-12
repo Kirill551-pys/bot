@@ -22,19 +22,30 @@ export function useTeams(leagueKey: string) {
 
 // ==================== ПРОГНОЗЫ ====================
 
+// ==================== ПРОГНОЗЫ ====================
+
 export function useMatchPrediction(team1: string, team2: string, league: string) {
   return useQuery({
     queryKey: ['prediction', team1, team2, league],
     queryFn: () => api.getMatchPrediction(team1, team2, league),
     enabled: !!team1 && !!team2 && !!league,
+    // ✅ ДОБАВЛЕНО: Защита от спама запросами при ошибке (решает проблему 429)
+    retry: 1, 
+    retryDelay: 1000, 
+    staleTime: 5 * 60 * 1000, // Кэшируем успешный ответ на 5 минут
   });
 }
 
 export function useHotPrediction() {
   return useQuery({
     queryKey: ['hot-prediction'],
-    queryFn: () => api.getHotPrediction(),
+    // ✅ ИСПРАВЛЕНО: вызываем правильный метод API (без аргументов команд)
+    queryFn: () => api.getHotPrediction(), 
     refetchInterval: 60 * 1000, // Обновляем каждую минуту
+    // ✅ ДОБАВЛЕНО: Защита от спама
+    retry: 1, 
+    retryDelay: 1000, 
+    staleTime: 30 * 1000, // Для горячих прогнозов кэш короче (30 сек), чтобы данные были свежее
   });
 }
 
