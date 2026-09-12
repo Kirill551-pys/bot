@@ -1,104 +1,290 @@
-Div,Date,HomeTeam,AwayTeam,FTHG,FTAG,FTR,Referee,HS,AS,HST,AST
-CL,16/09/2025,PSV,Union SG,1,3,A,Anthony Taylor,10,18,3,8
-CL,16/09/2025,Athletic Club,Arsenal,0,2,A,Donatas Rumšas,11,11,2,6
-CL,16/09/2025,Tottenham Hotspur,Villarreal,1,0,H,Rade Obrenović,9,10,1,0
-CL,16/09/2025,Benfica,Qarabağ,2,3,A,Erik Lambrechts,14,10,3,5
-CL,16/09/2025,Juventus,Dortmund,4,4,D,François Letexier,19,10,7,5
-CL,16/09/2025,Real Madrid,Marseille,2,1,H,Irfan Peljto,28,15,15,5
-CL,17/09/2025,Slavia Prague,Bodø/Glimt,2,2,D,Marian Barbu,26,11,11,10
-CL,17/09/2025,Olympiacos,Pafos FC,0,0,D,István Kovács,18,6,3,1
-CL,17/09/2025,Liverpool,Atlético Madrid,3,2,H,Maurizio Mariani,20,10,6,4
-CL,17/09/2025,Ajax,Inter,0,2,A,Michael Oliver,7,14,2,4
-CL,17/09/2025,Bayern Munich,Chelsea,3,1,H,Jose Maria Sánchez,16,9,5,3
-CL,17/09/2025,Paris Saint-Germain,Atalanta,4,0,H,Sandro Schärer,22,7,13,2
-CL,18/09/2025,Club Brugge,Monaco,4,1,H,Simone Sozza,26,13,10,5
-CL,18/09/2025,FC Copenhagen,Leverkusen,2,2,D,Əliyar Ağayev,12,15,7,4
-CL,18/09/2025,Manchester City,Napoli,2,0,H,Felix Zwayer,23,1,8,1
-CL,18/09/2025,Sporting CP,FC Kairat,4,1,H,Damian Sylwestrzak,21,9,8,4
-CL,18/09/2025,Newcastle United,Barcelona,1,2,A,Glenn Nyberg,10,19,6,5
-CL,18/09/2025,Eintracht Frankfurt,Galatasaray,5,1,H,Marco Guida,11,14,5,5
-CL,30/09/2025,Atalanta,Club Brugge,2,1,H,Espen Eskås,20,7,3,2
-CL,30/09/2025,Chelsea,Benfica,1,0,H,Daniel Siebert,8,9,3,3
-CL,30/09/2025,Atlético Madrid,Eintracht Frankfurt,5,1,H,Slavko Vinčič,18,6,12,2
-CL,30/09/2025,Inter,Slavia Prague,3,0,H,Chris Kavanagh,21,3,6,1
-CL,30/09/2025,Bodø/Glimt,Tottenham Hotspur,2,2,D,Ivan Kružliak,18,8,4,3
-CL,30/09/2025,Marseille,Ajax,4,0,H,Anthony Taylor,9,13,6,2
-CL,30/09/2025,FC Kairat,Real Madrid,0,5,A,Marco Guida,11,20,4,12
-CL,30/09/2025,Galatasaray,Liverpool,1,0,H,Clément Turpin,9,16,4,4
-CL,30/09/2025,Pafos FC,Bayern Munich,1,5,A,Manfredas Lukjančukas,6,26,2,15
-CL,01/10/2025,Union SG,Newcastle United,0,4,A,Urs Schnyder,17,13,6,6
-CL,01/10/2025,Arsenal,Olympiacos,2,0,H,François Letexier,16,10,5,3
-CL,01/10/2025,Qarabağ,FC Copenhagen,2,0,H,Serdar Gözübüyük,10,12,6,4
-CL,01/10/2025,Barcelona,Paris Saint-Germain,1,2,A,Michael Oliver,12,15,3,7
-CL,01/10/2025,Leverkusen,PSV,1,1,D,Glenn Nyberg,14,6,4,1
-CL,01/10/2025,Napoli,Sporting CP,2,1,H,Danny Makkelie,12,8,3,4
-CL,01/10/2025,Dortmund,Athletic Club,4,1,H,Szymon Marciniak,13,6,8,3
-CL,01/10/2025,Monaco,Manchester City,2,2,D,Jesús Gil,8,18,3,6
-CL,01/10/2025,Villarreal,Juventus,2,2,D,István Kovács,17,13,6,4
-CL,21/10/2025,Barcelona,Olympiacos,6,1,H,Urs Schnyder,14,5,7,2
-CL,21/10/2025,Newcastle United,Benfica,3,0,H,Szymon Marciniak,19,7,10,2
-CL,21/10/2025,Arsenal,Atlético Madrid,4,0,H,Davide Massa,19,11,8,1
-CL,21/10/2025,Leverkusen,Paris Saint-Germain,2,7,A,Jesús Gil,6,24,3,8
-CL,21/10/2025,PSV,Napoli,6,2,H,Daniel Siebert,19,10,8,2
-CL,21/10/2025,Villarreal,Manchester City,0,2,A,Serdar Gözübüyük,11,10,2,6
-CL,21/10/2025,Union SG,Inter,0,4,A,Glenn Nyberg,15,21,6,7
-CL,21/10/2025,FC Copenhagen,Dortmund,2,4,A,Danny Makkelie,11,9,4,5
-CL,21/10/2025,FC Kairat,Pafos FC,0,0,D,Chris Kavanagh,22,9,2,6
-CL,22/10/2025,Athletic Club,Qarabağ,3,1,H,Igor Pajač,21,9,5,4
-CL,22/10/2025,Galatasaray,Bodø/Glimt,3,1,H,Michael Oliver,23,8,11,2
-CL,22/10/2025,Sporting CP,Marseille,2,1,H,Rade Obrenović,14,10,7,3
-CL,22/10/2025,Chelsea,Ajax,5,1,H,Felix Zwayer,22,2,10,1
-CL,22/10/2025,Bayern Munich,Club Brugge,4,0,H,Donatas Rumšas,26,5,13,2
-CL,22/10/2025,Atalanta,Slavia Prague,0,0,D,Ricardo de Burgos,22,16,5,4
-CL,22/10/2025,Real Madrid,Juventus,1,0,H,Slavko Vinčič,28,13,10,4
-CL,22/10/2025,Monaco,Tottenham Hotspur,0,0,D,Marco Guida,23,11,8,2
-CL,22/10/2025,Eintracht Frankfurt,Liverpool,1,5,A,François Letexier,4,18,1,14
-CL,04/11/2025,Slavia Prague,Arsenal,0,3,A,Əliyar Ağayev,9,14,1,8
-CL,04/11/2025,Napoli,Eintracht Frankfurt,0,0,D,João Pinheiro,18,7,3,3
-CL,04/11/2025,Tottenham Hotspur,FC Copenhagen,4,0,H,Erik Lambrechts,14,12,6,4
-CL,04/11/2025,Liverpool,Real Madrid,1,0,H,István Kovács,17,8,9,2
-CL,04/11/2025,Juventus,Sporting CP,1,1,D,Daniel Siebert,18,4,9,1
-CL,04/11/2025,Atlético Madrid,Union SG,3,1,H,Espen Eskås,14,8,6,3
-CL,04/11/2025,Bodø/Glimt,Monaco,0,1,A,Damian Sylwestrzak,17,9,4,2
-CL,04/11/2025,Paris Saint-Germain,Bayern Munich,1,2,A,Maurizio Mariani,25,9,9,5
-CL,04/11/2025,Olympiacos,PSV,1,1,D,Clément Turpin,18,10,4,2
-CL,05/11/2025,Pafos FC,Villarreal,1,0,H,Sven Jablonski,5,18,2,5
-CL,05/11/2025,Manchester City,Dortmund,4,1,H,Szymon Marciniak,18,12,11,4
-CL,05/11/2025,Benfica,Leverkusen,0,1,A,Simone Sozza,21,7,6,3
-CL,05/11/2025,Newcastle United,Athletic Club,2,0,H,Ivan Kružliak,8,12,4,5
-CL,05/11/2025,Marseille,Atalanta,0,1,A,Jose Maria Sánchez,15,8,4,3
-CL,05/11/2025,Inter,FC Kairat,2,1,H,Luís Godinho,23,7,9,3
-CL,05/11/2025,Club Brugge,Barcelona,3,3,D,Anthony Taylor,10,23,6,6
-CL,05/11/2025,Ajax,Galatasaray,0,3,A,Benoît Bastien,8,14,2,7
-CL,05/11/2025,Qarabağ,Chelsea,2,2,D,Sebastian Gishamer,9,16,3,4
-CL,25/11/2025,Ajax,Benfica,0,2,A,Sven Jablonski,7,11,3,4
-CL,25/11/2025,Manchester City,Leverkusen,0,2,A,João Pinheiro,19,7,7,2
-CL,25/11/2025,Chelsea,Barcelona,3,0,H,Slavko Vinčič,15,5,6,2
-CL,25/11/2025,Galatasaray,Union SG,0,1,A,Jose Maria Sánchez,15,16,3,5
-CL,25/11/2025,Dortmund,Villarreal,4,0,H,Davide Massa,13,10,8,2
-CL,25/11/2025,Slavia Prague,Athletic Club,0,0,D,Donatas Rumšas,8,12,3,4
-CL,25/11/2025,Bodø/Glimt,Juventus,2,3,A,Danny Makkelie,18,23,6,16
-CL,25/11/2025,Marseille,Newcastle United,2,1,H,Maurizio Mariani,18,20,7,9
-CL,25/11/2025,Napoli,Qarabağ,2,0,H,Szymon Marciniak,17,11,8,3
-CL,26/11/2025,FC Copenhagen,FC Kairat,3,2,H,Nick Walsh,18,13,9,4
-CL,26/11/2025,Pafos FC,Monaco,2,2,D,Ivan Kružliak,17,14,4,6
-CL,26/11/2025,Liverpool,PSV,1,4,A,Alejandro Hernández,27,9,10,6
-CL,26/11/2025,Sporting CP,Club Brugge,3,0,H,Tobias Stieler,19,8,9,1
-CL,26/11/2025,Arsenal,Bayern Munich,3,1,H,Marco Guida,12,8,8,2
-CL,26/11/2025,Paris Saint-Germain,Tottenham Hotspur,5,3,H,Felix Zwayer,15,11,6,5
-CL,26/11/2025,Eintracht Frankfurt,Atalanta,0,3,A,Chris Kavanagh,9,21,3,7
-CL,26/11/2025,Atlético Madrid,Inter,2,1,H,François Letexier,15,17,6,6
-CL,26/11/2025,Olympiacos,Real Madrid,3,4,A,Michael Oliver,18,15,8,7
-CL,09/12/2025,Bayern Munich,Sporting CP,3,1,H,Nick Walsh,23,4,9,0
-CL,09/12/2025,Tottenham Hotspur,Slavia Prague,3,0,H,Benoît Bastien,16,12,10,5
-CL,09/12/2025,FC Kairat,Olympiacos,0,1,A,Juan Martínez,5,20,1,8
-CL,09/12/2025,Inter,Liverpool,0,1,A,Felix Zwayer,9,12,2,5
-CL,09/12/2025,Atalanta,Chelsea,2,1,H,Alejandro Hernández,14,10,4,5
-CL,09/12/2025,Barcelona,Eintracht Frankfurt,2,1,H,Davide Massa,19,6,7,4
-CL,09/12/2025,PSV,Atlético Madrid,2,3,A,Michael Oliver,13,15,3,9
-CL,09/12/2025,Monaco,Galatasaray,1,0,H,Danny Makkelie,19,13,5,2
-CL,09/12/2025,Union SG,Marseille,2,3,A,João Pinheiro,8,10,6,5
-CL,10/12/2025,Villarreal,FC Copenhagen,2,3,A,Ivan Kružliak,19,8,5,4
+Div,Date,HomeTeam,AwayTeam,FTHG,FTAG,FTR,HS,AS,HST,AST
+CL,2024-09-17,Juventus,PSV Eindhoven,3,1,H,
+CL,2024-09-17,Young Boys,Aston Villa,0,3,A,
+CL,2024-09-17,Bayern Munich,Dinamo Zagreb,9,2,H,
+CL,2024-09-17,Real Madrid,Stuttgart,3,1,H,
+CL,2024-09-17,Milan,Liverpool,1,3,A,
+CL,2024-09-17,Sporting CP,Lille,2,0,H,
+CL,2024-09-18,Bologna,Shakhtar Donetsk,0,0,D,
+CL,2024-09-18,Sparta Prague,RB Salzburg,3,0,H,
+CL,2024-09-18,Manchester City,Inter,0,0,D,
+CL,2024-09-18,PSG,Girona,1,0,H,
+CL,2024-09-18,Club Brugge,Dortmund,0,3,A,
+CL,2024-09-18,Celtic,Slovan Bratislava,5,1,H,
+CL,2024-09-19,Feyenoord,Leverkusen,0,4,A,
+CL,2024-09-19,Red Star Belgrade,Benfica,1,2,A,
+CL,2024-09-19,Atalanta,Arsenal,0,0,D,
+CL,2024-09-19,Atletico Madrid,RB Leipzig,2,1,H,
+CL,2024-09-19,Brest,Sturm Graz,2,1,H,
+CL,2024-09-19,Monaco,Barcelona,2,1,H,
+CL,2024-10-01,RB Salzburg,Brest,0,4,A,
+CL,2024-10-01,Stuttgart,Sparta Prague,1,1,D,
+CL,2024-10-01,Arsenal,PSG,2,0,H,
+CL,2024-10-01,Leverkusen,Milan,1,0,H,
+CL,2024-10-01,Dortmund,Celtic,7,1,H,
+CL,2024-10-01,Barcelona,Young Boys,5,0,H,
+CL,2024-10-01,Inter,Red Star Belgrade,4,0,H,
+CL,2024-10-01,PSV Eindhoven,Sporting CP,1,1,D,
+CL,2024-10-01,Slovan Bratislava,Manchester City,0,4,A,
+CL,2024-10-02,Shakhtar Donetsk,Atalanta,0,3,A,
+CL,2024-10-02,Girona,Feyenoord,2,3,A,
+CL,2024-10-02,Aston Villa,Bayern Munich,1,0,H,
+CL,2024-10-02,Liverpool,Bologna,2,0,H,
+CL,2024-10-02,Benfica,Atletico Madrid,4,0,H,
+CL,2024-10-02,RB Leipzig,Juventus,2,3,A,
+CL,2024-10-02,Lille,Real Madrid,1,0,H,
+CL,2024-10-02,Sturm Graz,Club Brugge,0,1,A,
+CL,2024-10-02,Dinamo Zagreb,Monaco,2,2,D,
+CL,2024-10-22,Milan,Club Brugge,3,1,H,
+CL,2024-10-22,Monaco,Red Star Belgrade,5,1,H,
+CL,2024-10-22,Arsenal,Shakhtar Donetsk,1,0,H,
+CL,2024-10-22,Aston Villa,Bologna,2,0,H,
+CL,2024-10-22,PSG,PSV Eindhoven,1,1,D,
+CL,2024-10-22,Real Madrid,Dortmund,5,2,H,
+CL,2024-10-22,Girona,Slovan Bratislava,2,0,H,
+CL,2024-10-22,Sturm Graz,Sporting CP,0,2,A,
+CL,2024-10-22,Juventus,Stuttgart,0,1,A,
+CL,2024-10-23,Atalanta,Celtic,0,0,D,
+CL,2024-10-23,Brest,Leverkusen,1,1,D,
+CL,2024-10-23,Atletico Madrid,Lille,1,3,A,
+CL,2024-10-23,Young Boys,Inter,0,1,A,
+CL,2024-10-23,Barcelona,Bayern Munich,4,1,H,
+CL,2024-10-23,RB Salzburg,Dinamo Zagreb,0,2,A,
+CL,2024-10-23,Manchester City,Sparta Prague,5,0,H,
+CL,2024-10-23,RB Leipzig,Liverpool,0,1,A,
+CL,2024-10-23,Benfica,Feyenoord,1,3,A,
+CL,2024-11-05,PSV Eindhoven,Girona,4,0,H,
+CL,2024-11-05,Slovan Bratislava,Dinamo Zagreb,1,4,A,
+CL,2024-11-05,Bologna,Monaco,0,1,A,
+CL,2024-11-05,Dortmund,Sturm Graz,1,0,H,
+CL,2024-11-05,Celtic,RB Leipzig,3,1,H,
+CL,2024-11-05,Liverpool,Leverkusen,4,0,H,
+CL,2024-11-05,Lille,Juventus,1,1,D,
+CL,2024-11-05,Real Madrid,Milan,1,3,A,
+CL,2024-11-05,Sporting CP,Manchester City,4,1,H,
+CL,2024-11-06,Club Brugge,Aston Villa,1,0,H,
+CL,2024-11-06,Shakhtar Donetsk,Young Boys,2,1,H,
+CL,2024-11-06,Sparta Prague,Brest,0,2,A,
+CL,2024-11-06,Bayern Munich,Benfica,1,0,H,
+CL,2024-11-06,Inter,Arsenal,1,0,H,
+CL,2024-11-06,Feyenoord,RB Salzburg,1,3,A,
+CL,2024-11-06,Red Star Belgrade,Barcelona,2,5,A,
+CL,2024-11-06,PSG,Atletico Madrid,1,2,A,
+CL,2024-11-06,Stuttgart,Atalanta,0,2,A,
+CL,2024-11-26,Sparta Prague,Atletico Madrid,0,6,A,
+CL,2024-11-26,Slovan Bratislava,Milan,2,3,A,
+CL,2024-11-26,Leverkusen,RB Salzburg,5,0,H,
+CL,2024-11-26,Young Boys,Atalanta,1,6,A,
+CL,2024-11-26,Barcelona,Brest,3,0,H,
+CL,2024-11-26,Bayern Munich,PSG,1,0,H,
+CL,2024-11-26,Inter,RB Leipzig,1,0,H,
+CL,2024-11-26,Manchester City,Feyenoord,3,3,D,
+CL,2024-11-26,Sporting CP,Arsenal,1,5,A,
+CL,2024-11-27,Red Star Belgrade,Stuttgart,5,1,H,
+CL,2024-11-27,Sturm Graz,Girona,1,0,H,
+CL,2024-11-27,Monaco,Benfica,2,3,A,
+CL,2024-11-27,Aston Villa,Juventus,0,0,D,
+CL,2024-11-27,Bologna,Lille,1,2,A,
+CL,2024-11-27,Celtic,Club Brugge,1,1,D,
+CL,2024-11-27,Dinamo Zagreb,Dortmund,0,3,A,
+CL,2024-11-27,Liverpool,Real Madrid,2,0,H,
+CL,2024-11-27,PSV Eindhoven,Shakhtar Donetsk,3,2,H,
+CL,2024-12-10,Girona,Liverpool,0,1,A,
+CL,2024-12-10,Shakhtar Donetsk,Bayern Munich,1,5,A,
+CL,2024-12-10,Atalanta,Real Madrid,2,3,A,
+CL,2024-12-10,RB Leipzig,Aston Villa,2,3,A,
+CL,2024-12-10,Club Brugge,Sporting CP,2,1,H,
+CL,2024-12-10,RB Salzburg,PSG,0,3,A,
+CL,2024-12-10,Brest,PSV Eindhoven,1,0,H,
+CL,2024-12-10,Dortmund,Barcelona,2,3,A,
+CL,2024-12-11,Atletico Madrid,Slovan Bratislava,3,1,H,
+CL,2024-12-11,Lille,Sturm Graz,3,2,H,
+CL,2024-12-11,Milan,Red Star Belgrade,2,1,H,
+CL,2024-12-11,Arsenal,Monaco,3,0,H,
+CL,2024-12-11,Benfica,Bologna,0,0,D,
+CL,2024-12-11,Stuttgart,Young Boys,5,1,H,
+CL,2024-12-11,Juventus,Manchester City,2,0,H,
+CL,2024-12-11,Feyenoord,Sparta Prague,4,2,H,
+CL,2025-01-21,Atalanta,Sturm Graz,5,0,H,
+CL,2025-01-21,Monaco,Aston Villa,1,0,H,
+CL,2025-01-21,Slovan Bratislava,Stuttgart,1,3,A,
+CL,2025-01-21,Club Brugge,Juventus,0,0,D,
+CL,2025-01-21,Bologna,Dortmund,2,1,H,
+CL,2025-01-21,Red Star Belgrade,PSV Eindhoven,2,3,A,
+CL,2025-01-21,Liverpool,Lille,2,1,H,
+CL,2025-01-21,Benfica,Barcelona,4,5,A,
+CL,2025-01-22,Shakhtar Donetsk,Brest,2,0,H,
+CL,2025-01-22,RB Leipzig,Sporting CP,2,1,H,
+CL,2025-01-22,Milan,Girona,1,0,H,
+CL,2025-01-22,Sparta Prague,Inter,0,1,A,
+CL,2025-01-22,Arsenal,Dinamo Zagreb,3,0,H,
+CL,2025-01-22,Celtic,Young Boys,1,0,H,
+CL,2025-01-22,Feyenoord,Bayern Munich,3,0,H,
+CL,2025-01-22,PSG,Manchester City,4,2,H,
+CL,2025-01-22,Real Madrid,RB Salzburg,5,1,H,
+CL,2025-01-29,Aston Villa,Celtic,4,2,H,
+CL,2025-01-29,Leverkusen,Sparta Prague,2,0,H,
+CL,2025-01-29,Dortmund,Shakhtar Donetsk,3,1,H,
+CL,2025-01-29,Young Boys,Red Star Belgrade,0,1,A,
+CL,2025-01-29,Barcelona,Atalanta,2,2,D,
+CL,2025-01-29,Bayern Munich,Slovan Bratislava,3,1,H,
+CL,2025-01-29,Inter,Monaco,3,0,H,
+CL,2025-01-29,RB Salzburg,Atletico Madrid,1,4,A,
+CL,2025-01-29,PSV Eindhoven,Liverpool,3,2,H,
+CL,2025-01-29,Sturm Graz,RB Leipzig,1,0,H,
+CL,2025-01-29,Stuttgart,PSG,1,4,A,
+CL,2025-01-29,Manchester City,Club Brugge,3,1,H,
+CL,2025-01-29,Sporting CP,Bologna,1,1,D,
+CL,2025-01-29,Girona,Arsenal,1,2,A,
+CL,2025-01-29,Dinamo Zagreb,Milan,2,1,H,
+CL,2025-01-29,Brest,Real Madrid,0,3,A,
+CL,2025-01-29,Juventus,Benfica,0,2,A,
+CL,2025-01-29,Lille,Feyenoord,6,1,H,
+CL,2025-02-11,Brest,PSG,0,3,A,
+CL,2025-02-11,Juventus,PSV Eindhoven,2,1,H,
+CL,2025-02-11,Manchester City,Real Madrid,2,3,A,
+CL,2025-02-11,Sporting CP,Dortmund,0,3,A,
+CL,2025-02-12,Club Brugge,Atalanta,2,1,H,
+CL,2025-02-12,Monaco,Benfica,0,1,A,
+CL,2025-02-12,Celtic,Bayern Munich,1,2,A,
+CL,2025-02-12,Feyenoord,Milan,1,0,H,
+CL,2025-02-18,Milan,Feyenoord,1,1,D,
+CL,2025-02-19,Atalanta,Club Brugge,1,3,A,
+CL,2025-02-19,Benfica,Monaco,3,3,D,
+CL,2025-02-19,Bayern Munich,Celtic,1,1,D,
+CL,2025-02-19,Dortmund,Sporting CP,0,0,D,
+CL,2025-02-19,PSG,Brest,7,0,H,
+CL,2025-02-19,PSV Eindhoven,Juventus,3,1,H,
+CL,2025-02-19,Real Madrid,Manchester City,3,1,H,
+CL,2025-03-04,PSG,Liverpool,0,1,A,
+CL,2025-03-04,Club Brugge,Aston Villa,1,3,A,
+CL,2025-03-04,Real Madrid,Atletico Madrid,2,1,H,
+CL,2025-03-04,PSV Eindhoven,Arsenal,1,7,A,
+CL,2025-03-04,Benfica,Barcelona,0,1,A,
+CL,2025-03-04,Dortmund,Lille,1,1,D,
+CL,2025-03-04,Bayern Munich,Leverkusen,3,0,H,
+CL,2025-03-04,Feyenoord,Inter,0,2,A,
+CL,2025-03-11,Liverpool,PSG,1,4,A,
+CL,2025-03-11,Aston Villa,Club Brugge,3,0,H,
+CL,2025-03-11,Atletico Madrid,Real Madrid,2,4,A,
+CL,2025-03-11,Arsenal,PSV Eindhoven,2,2,D,
+CL,2025-03-11,Barcelona,Benfica,3,1,H,
+CL,2025-03-11,Lille,Dortmund,1,2,A,
+CL,2025-03-11,Leverkusen,Bayern Munich,0,2,A,
+CL,2025-03-11,Inter,Feyenoord,1,2,A,
+CL,2025-04-08,Arsenal,Real Madrid,3,0,H,
+CL,2025-04-08,Bayern Munich,Inter,1,2,A,
+CL,2025-04-09,PSG,Aston Villa,3,1,H,
+CL,2025-04-09,Barcelona,Dortmund,4,0,H,
+CL,2025-04-15,Aston Villa,PSG,3,2,H,
+CL,2025-04-15,Dortmund,Barcelona,3,1,H,
+CL,2025-04-16,Real Madrid,Arsenal,1,2,A,
+CL,2025-04-16,Inter,Bayern Munich,2,2,D,
+CL,2025-04-29,Arsenal,PSG,0,1,A,
+CL,2025-04-30,Barcelona,Inter,3,3,D,
+CL,2025-05-06,Inter,Barcelona,4,3,H,
+CL,2025-05-07,PSG,Arsenal,2,1,H,
+CL,2025-05-31,PSG,Inter,5,0,H,
+CL,16/09/2025,PSV,Union SG,1,3,A,10,18,3,8
+CL,16/09/2025,Athletic Club,Arsenal,0,2,A,11,11,2,6
+CL,16/09/2025,Tottenham Hotspur,Villarreal,1,0,H,9,10,1,0
+CL,16/09/2025,Benfica,Qarabağ,2,3,A,14,10,3,5
+CL,16/09/2025,Juventus,Dortmund,4,4,D,19,10,7,5
+CL,16/09/2025,Real Madrid,Marseille,2,1,H,28,15,15,5
+CL,17/09/2025,Slavia Prague,Bodø/Glimt,2,2,D,26,11,11,10
+CL,17/09/2025,Olympiacos,Pafos FC,0,0,D,18,6,3,1
+CL,17/09/2025,Liverpool,Atlético Madrid,3,2,H,20,10,6,4
+CL,17/09/2025,Ajax,Inter,0,2,A,7,14,2,4
+CL,17/09/2025,Bayern Munich,Chelsea,3,1,H,16,9,5,3
+CL,17/09/2025,Paris Saint-Germain,Atalanta,4,0,H,22,7,13,2
+CL,18/09/2025,Club Brugge,Monaco,4,1,H,26,13,10,5
+CL,18/09/2025,FC Copenhagen,Leverkusen,2,2,D,12,15,7,4
+CL,18/09/2025,Manchester City,Napoli,2,0,H,23,1,8,1
+CL,18/09/2025,Sporting CP,FC Kairat,4,1,H,21,9,8,4
+CL,18/09/2025,Newcastle United,Barcelona,1,2,A,10,19,6,5
+CL,18/09/2025,Eintracht Frankfurt,Galatasaray,5,1,H,11,14,5,5
+CL,30/09/2025,Atalanta,Club Brugge,2,1,H,20,7,3,2
+CL,30/09/2025,Chelsea,Benfica,1,0,H,8,9,3,3
+CL,30/09/2025,Atlético Madrid,Eintracht Frankfurt,5,1,H,18,6,12,2
+CL,30/09/2025,Inter,Slavia Prague,3,0,H,21,3,6,1
+CL,30/09/2025,Bodø/Glimt,Tottenham Hotspur,2,2,D,18,8,4,3
+CL,30/09/2025,Marseille,Ajax,4,0,H,9,13,6,2
+CL,30/09/2025,FC Kairat,Real Madrid,0,5,A,11,20,4,12
+CL,30/09/2025,Galatasaray,Liverpool,1,0,H,9,16,4,4
+CL,30/09/2025,Pafos FC,Bayern Munich,1,5,A,6,26,2,15
+CL,01/10/2025,Union SG,Newcastle United,0,4,A,17,13,6,6
+CL,01/10/2025,Arsenal,Olympiacos,2,0,H,16,10,5,3
+CL,01/10/2025,Qarabağ,FC Copenhagen,2,0,H,10,12,6,4
+CL,01/10/2025,Barcelona,Paris Saint-Germain,1,2,A,12,15,3,7
+CL,01/10/2025,Leverkusen,PSV,1,1,D,14,6,4,1
+CL,01/10/2025,Napoli,Sporting CP,2,1,H,12,8,3,4
+CL,01/10/2025,Dortmund,Athletic Club,4,1,H,13,6,8,3
+CL,01/10/2025,Monaco,Manchester City,2,2,D,8,18,3,6
+CL,01/10/2025,Villarreal,Juventus,2,2,D,17,13,6,4
+CL,21/10/2025,Barcelona,Olympiacos,6,1,H,14,5,7,2
+CL,21/10/2025,Newcastle United,Benfica,3,0,H,19,7,10,2
+CL,21/10/2025,Arsenal,Atlético Madrid,4,0,H,19,11,8,1
+CL,21/10/2025,Leverkusen,Paris Saint-Germain,2,7,A,6,24,3,8
+CL,21/10/2025,PSV,Napoli,6,2,H,19,10,8,2
+CL,21/10/2025,Villarreal,Manchester City,0,2,A,11,10,2,6
+CL,21/10/2025,Union SG,Inter,0,4,A,15,21,6,7
+CL,21/10/2025,FC Copenhagen,Dortmund,2,4,A,11,9,4,5
+CL,21/10/2025,FC Kairat,Pafos FC,0,0,D,22,9,2,6
+CL,22/10/2025,Athletic Club,Qarabağ,3,1,H,21,9,5,4
+CL,22/10/2025,Galatasaray,Bodø/Glimt,3,1,H,23,8,11,2
+CL,22/10/2025,Sporting CP,Marseille,2,1,H,14,10,7,3
+CL,22/10/2025,Chelsea,Ajax,5,1,H,22,2,10,1
+CL,22/10/2025,Bayern Munich,Club Brugge,4,0,H,26,5,13,2
+CL,22/10/2025,Atalanta,Slavia Prague,0,0,D,22,16,5,4
+CL,22/10/2025,Real Madrid,Juventus,1,0,H,28,13,10,4
+CL,22/10/2025,Monaco,Tottenham Hotspur,0,0,D,23,11,8,2
+CL,22/10/2025,Eintracht Frankfurt,Liverpool,1,5,A,4,18,1,14
+CL,04/11/2025,Slavia Prague,Arsenal,0,3,A,9,14,1,8
+CL,04/11/2025,Napoli,Eintracht Frankfurt,0,0,D,18,7,3,3
+CL,04/11/2025,Tottenham Hotspur,FC Copenhagen,4,0,H,14,12,6,4
+CL,04/11/2025,Liverpool,Real Madrid,1,0,H,17,8,9,2
+CL,04/11/2025,Juventus,Sporting CP,1,1,D,18,4,9,1
+CL,04/11/2025,Atlético Madrid,Union SG,3,1,H,14,8,6,3
+CL,04/11/2025,Bodø/Glimt,Monaco,0,1,A,17,9,4,2
+CL,04/11/2025,Paris Saint-Germain,Bayern Munich,1,2,A,25,9,9,5
+CL,04/11/2025,Olympiacos,PSV,1,1,D,18,10,4,2
+CL,05/11/2025,Pafos FC,Villarreal,1,0,H,5,18,2,5
+CL,05/11/2025,Manchester City,Dortmund,4,1,H,18,12,11,4
+CL,05/11/2025,Benfica,Leverkusen,0,1,A,21,7,6,3
+CL,05/11/2025,Newcastle United,Athletic Club,2,0,H,8,12,4,5
+CL,05/11/2025,Marseille,Atalanta,0,1,A,15,8,4,3
+CL,05/11/2025,Inter,FC Kairat,2,1,H,23,7,9,3
+CL,05/11/2025,Club Brugge,Barcelona,3,3,D,10,23,6,6
+CL,05/11/2025,Ajax,Galatasaray,0,3,A,8,14,2,7
+CL,05/11/2025,Qarabağ,Chelsea,2,2,D,9,16,3,4
+CL,25/11/2025,Ajax,Benfica,0,2,A,7,11,3,4
+CL,25/11/2025,Manchester City,Leverkusen,0,2,A,19,7,7,2
+CL,25/11/2025,Chelsea,Barcelona,3,0,H,15,5,6,2
+CL,25/11/2025,Galatasaray,Union SG,0,1,A,15,16,3,5
+CL,25/11/2025,Dortmund,Villarreal,4,0,H,13,10,8,2
+CL,25/11/2025,Slavia Prague,Athletic Club,0,0,D,8,12,3,4
+CL,25/11/2025,Bodø/Glimt,Juventus,2,3,A,18,23,6,16
+CL,25/11/2025,Marseille,Newcastle United,2,1,H,18,20,7,9
+CL,25/11/2025,Napoli,Qarabağ,2,0,H,17,11,8,3
+CL,26/11/2025,FC Copenhagen,FC Kairat,3,2,H,18,13,9,4
+CL,26/11/2025,Pafos FC,Monaco,2,2,D,17,14,4,6
+CL,26/11/2025,Liverpool,PSV,1,4,A,27,9,10,6
+CL,26/11/2025,Sporting CP,Club Brugge,3,0,H,19,8,9,1
+CL,26/11/2025,Arsenal,Bayern Munich,3,1,H,12,8,8,2
+CL,26/11/2025,Paris Saint-Germain,Tottenham Hotspur,5,3,H,15,11,6,5
+CL,26/11/2025,Eintracht Frankfurt,Atalanta,0,3,A,9,21,3,7
+CL,26/11/2025,Atlético Madrid,Inter,2,1,H,15,17,6,6
+CL,26/11/2025,Olympiacos,Real Madrid,3,4,A,18,15,8,7
+CL,09/12/2025,Bayern Munich,Sporting CP,3,1,H,23,4,9,0
+CL,09/12/2025,Tottenham Hotspur,Slavia Prague,3,0,H,16,12,10,5
+CL,09/12/2025,FC Kairat,Olympiacos,0,1,A,5,20,1,8
+CL,09/12/2025,Inter,Liverpool,0,1,A,9,12,2,5
+CL,09/12/2025,Atalanta,Chelsea,2,1,H,14,10,4,5
+CL,09/12/2025,Barcelona,Eintracht Frankfurt,2,1,H,19,6,7,4
+CL,09/12/2025,PSV,Atlético Madrid,2,3,A,13,15,3,9
+CL,09/12/2025,Monaco,Galatasaray,1,0,H,19,13,5,2
+CL,09/12/2025,Union SG,Marseille,2,3,A,8,10,6,5
+CL,10/12/2025,Villarreal,FC Copenhagen,2,3,A,19,8,5,4
 CL,10/12/2025,Benfica,Napoli,2,0,H,Slavko Vinčič,13,9,5,2
 CL,10/12/2025,Real Madrid,Manchester City,1,2,A,Clément Turpin,16,12,1,8
 CL,10/12/2025,Leverkusen,Newcastle United,2,2,D,Serdar Gözübüyük,17,13,7,5

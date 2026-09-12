@@ -503,24 +503,26 @@ def predict_match(team1: str, team2: str, model_data: dict, ratings_dict: dict =
 
         for team, var_name in [(team1, "team1"), (team2, "team2")]:
             clean_team = team.strip().lower()
-    
-            # 1. Точное совпадение (игнорируя пробелы и регистр)
+            matched_team = None  # ✅ 1. ВСЕГДА инициализируем переменную заранее
+
+            # 2. Точное совпадение (игнорируя пробелы и регистр)
             if clean_team in team_map:
-                if var_name == "team1":
-                    team1 = team_map[clean_team]
-                else:
-                    team2 = team_map[clean_team]
+                matched_team = team_map[clean_team]
             else:
-                # 2. Поиск по схожести (порог снижен до 0.55)
-                found = find_similar_team(team.strip(), all_teams, threshold=0.55)
-            if found:
-                logger.info(f"✅ Автоисправление: '{team}' -> '{found}'")
+                # 3. Поиск по схожести (порог 0.55)
+                matched_team = find_similar_team(team.strip(), all_teams, threshold=0.60)
+
+            # 4. Проверяем результат поиска
+            if matched_team:
+                if matched_team != team: # Логируем только если было исправление
+                    logger.info(f"✅ Автоисправление: '{team}' -> '{matched_team}'")
+            
                 if var_name == "team1":
-                    team1 = found
+                    team1 = matched_team
                 else:
-                    team2 = found
+                    team2 = matched_team
             else:
-                # 3. Детальный лог ошибки
+                # 5. Детальный лог ошибки (если так и не нашли)
                 logger.error(f"❌ КОМАНДА НЕ НАЙДЕНА: '{team}' (переменная: {var_name})")
                 logger.error(f"   Всего команд в базе: {len(all_teams)}")
                 logger.error(f"   Примеры (первые 20): {all_teams[:20]}")
@@ -530,7 +532,8 @@ def predict_match(team1: str, team2: str, model_data: dict, ratings_dict: dict =
                 if close:
                     logger.error(f"   Возможно, вы имели в виду: {close}")
             
-                return {"error": f"Команда '{team}' не найдена в лиге '{req.league if 'req' in locals() else 'unknown'}'. Проверьте выбранную лигу."}
+                # ✅ Убрали req.league, так как его нет в model.py
+                return {"error": f"Команда '{team}' не найдена. Проверьте название и выбранную лигу."}
         
         current_date = datetime.now()
         home_metrics = calculate_team_metrics(all_matches_df, team1, current_date) if all_matches_df is not None else {}
