@@ -10,6 +10,7 @@ import os
 import logging
 import time
 
+
 # Добавляем корневую папку в путь (для импорта model.py, database.py)
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
@@ -586,28 +587,36 @@ def _set_hot_bet(best_match: dict) -> dict:
 
 
 def _diversify_by_league(candidates: list, limit: int = 5, penalty: float = 15) -> list:
-    """Обеспечивает разнообразие лиг в топ-N с минимальным порогом качества 80."""
+    """Обеспечивает разнообразие лиг в топ-N, не выкидывая хорошие матчи."""
     if not candidates:
         return []
     
+    # Сортируем по исходному скорингу (confidence + value)
     sorted_candidates = sorted(candidates, key=lambda x: x['score'], reverse=True)
     result = []
     league_count = {}
     
     for c in sorted_candidates:
+        if len(result) >= limit:
+            break
+            
         league = c['league']
         count = league_count.get(league, 0)
-        adjusted_score = c['score'] - count * penalty
         
-        if adjusted_score >= 80 and len(result) < limit:
+        # Применяем штраф за повторение лиги
+        adjusted_score = c['score'] - (count * penalty)
+        
+        # 🔥 ИЗМЕНЕНИЕ 1: Снижаем порог до 65, чтобы не терять качественные прогнозы из-за штрафа
+        if adjusted_score >= 65:
             result.append(c)
             league_count[league] = count + 1
-    
+            
+    # 🔥 ИЗМЕНЕНИЕ 2: Если после диверсификации мест меньше limit, 
+    # добиваем список лучшими оставшимися кандидатами БЕЗ штрафа
     if len(result) < limit:
         remaining = [c for c in sorted_candidates if c not in result]
-        for c in remaining:
-            if len(result) < limit:
-                result.append(c)
+        remaining.sort(key=lambda x: x['score'], reverse=True)
+        result.extend(remaining[:limit - len(result)])
     
     return result
 

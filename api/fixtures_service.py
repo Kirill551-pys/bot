@@ -8,6 +8,8 @@
 import httpx
 import logging
 import time
+from datetime import datetime, timedelta, timezone  # 🔥 ДОБАВИТЬ ЭТО
+
 from typing import Dict, List, Optional
 from config import ODDS_API_KEY, FIXTURES_CACHE_TTL, ODDS_LEAGUES_MAP
 
@@ -99,19 +101,40 @@ def get_fixtures(league_key: str, force_refresh: bool = False) -> List[dict]:
 
         events = response.json()
 
-        # 5. Обрабатываем каждый матч
+        # 5. Обрабатываем каждый матч с ФИЛЬТРАЦИЕЙ ПО ДАТЕ
         fixtures = []
-        for event in events:
-            fixture = _process_event(event, league_key)
-            if fixture:
-                fixtures.append(fixture)
+        
+        # 🔥 КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Ограничиваем горизонт прогнозирования
+        now_utc = datetime.now(timezone.utc)
+        max_date_utc = now_utc + timedelta(days=4)  # Ищем матчи только на ближайшие 4 дня
 
-        # 6. Сохраняем в кэш
+        for event in events:
+            try:
+                commence_time_str = event.get("commence_time", "")
+                if not commence_time_str:
+                    continue
+                
+                # Парсим ISO-дату (API отдаёт с 'Z' на конце, заменяем на '+00:00' для Python)
+                commence_time = datetime.fromisoformat(commence_time_str.replace('Z', '+00:00'))
+                
+                # Проверяем: матч должен быть в будущем, но не дальше 4 дней
+                if now_utc <= commence_time <= max_date_utc:
+                    fixture = _process_event(event, league_key)
+                    if fixture:
+                        fixtures.append(fixture)
+                else:
+                    # Матч либо уже прошёл, либо слишком далеко в будущем — игнорируем
+                    pass
+                    
+            except ValueError as e:
+                logger.warning(f"⚠️ Ошибка парсинга даты матча: {e}")
+                continue
+
+        # 6. Сохраняем в кэш (теперь там только актуальные матчи!)
         _cache[league_key] = {
             "data": fixtures,
             "ts": time.time(),
         }
-
         logger.info(f"✅ Загружено {len(fixtures)} матчей для {league_key}")
         return fixtures
 
