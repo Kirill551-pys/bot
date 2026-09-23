@@ -64,6 +64,20 @@ def init_db():
                     FOREIGN KEY (referred_id) REFERENCES subscribers(user_id) ON DELETE CASCADE
                 );
             ''')
+
+            cursor = conn.cursor()
+            new_columns = {
+                'last_paid_end_date': 'TEXT',
+                'promo_first_month_used': 'INTEGER DEFAULT 0'
+            }
+
+            for col_name, col_type in new_columns.items():
+                try:
+                    cursor.execute(f"ALTER TABLE subscribers ADD COLUMN {col_name} {col_type}")
+                    logger.info(f"✅ Миграция БД: добавлена колонка {col_name}")
+                except sqlite3.OperationalError:
+                    pass
+            conn.commit()
         logger.info("✅ База данных инициализирована")
 
 def get_all_users_count() -> int:
@@ -120,16 +134,17 @@ def create_user(user_id: int, username: str = None, first_name: str = None) -> N
             conn.commit()
 
 def activate_subscription(user_id: int, tariff: str, days: int) -> None:
+    """Активирует подписку. Для платных тарифов сохраняет дату окончания для Win-back."""
     now = datetime.now(timezone.utc)
     end_date = now + timedelta(days=days)
-
+    
     with _db_lock:
         with _get_connection() as conn:
             row = conn.execute(
                 'SELECT subscription_end FROM subscribers WHERE user_id = ?',
                 (user_id,)
             ).fetchone()
-
+            
             if row and row[0]:
                 try:
                     dt_str = row[0]
@@ -138,17 +153,61 @@ def activate_subscription(user_id: int, tariff: str, days: int) -> None:
                     current_end = datetime.fromisoformat(dt_str)
                     if current_end.tzinfo is None:
                         current_end = current_end.replace(tzinfo=timezone.utc)
+                    
+                    # Если подписка еще активна, продлеваем от текущей даты окончания
                     if current_end > now:
                         end_date = current_end + timedelta(days=days)
                 except ValueError:
                     logger.warning(f"⚠️ Неверный формат даты подписки для user {user_id}")
-
+            
+            # Обновляем основные данные подписки
             conn.execute('''
                 UPDATE subscribers
                 SET subscription_type = ?, subscription_start = ?, subscription_end = ?, is_active = 1
                 WHERE user_id = ?
             ''', (tariff, now.isoformat(), end_date.isoformat(), user_id))
+            
+            # 🆕 ЛОГИКА ДЛЯ МОНЕТИЗАЦИИ:
+            # 1. Если это платная подписка (не trial и не free), фиксируем дату окончания
+            if tariff not in ('trial', 'free'):
+                conn.execute('''
+                    UPDATE subscribers 
+                    SET last_paid_end_date = ? 
+                    WHERE user_id = ?
+                ''', (end_date.isoformat(), user_id))
+                
+            # 2. Если пользователь оплатил промо-тариф, ставим флаг, что он использован
+            if tariff == 'promo_month':
+                conn.execute('''
+                    UPDATE subscribers 
+                    SET promo_first_month_used = 1 
+                    WHERE user_id = ?
+                ''', (user_id,))
+                
             conn.commit()
+
+def cancel_subscription(user_id: int) -> bool:
+    """
+    Отменяет подписку пользователя.
+    Сбрасывает статус на 'free', деактивирует доступ и очищает даты.
+    """
+    with _db_lock:
+        with _get_connection() as conn:
+            try:
+                cursor = conn.execute('''
+                    UPDATE subscribers
+                    SET is_active = 0, 
+                        subscription_type = 'free', 
+                        subscription_start = NULL,
+                        subscription_end = NULL
+                    WHERE user_id = ?
+                ''', (user_id,))
+                conn.commit()
+                logger.info(f"🛑 Подписка для юзера {user_id} успешно отменена")
+                return cursor.rowcount > 0
+            except Exception as e:
+                logger.error(f"❌ Ошибка отмены подписки для {user_id}: {e}")
+                return False
 
 def use_trial(user_id: int) -> None:
     with _db_lock:
@@ -299,49 +358,111 @@ def is_subscription_active(user_id: int) -> bool:
 def get_subscription_info(user_id: int) -> dict:
     """
     Возвращает подробную информацию о подписке для фронтенда.
-    Используется на странице /subscribe и для проверки доступа.
+    Включая флаги доступности промо и win-back скидки.
     """
     with _get_connection() as conn:
         row = conn.execute(
-            '''SELECT user_id, username, first_name, subscription_type, 
-                      subscription_start, subscription_end, trial_used, 
-                      is_active, created_at
+            '''SELECT user_id, username, first_name, subscription_type,
+                      subscription_start, subscription_end, trial_used,
+                      is_active, created_at, last_paid_end_date, promo_first_month_used
                FROM subscribers WHERE user_id = ?''',
             (user_id,)
         ).fetchone()
-    
-    if not row:
-        return {
-            'subscription_type': 'free',
-            'is_active': False,
-            'days_left': 0,
-            'trial_available': True
-        }
-    
-    # Преобразуем строку в dict
-    sub = dict(row)
-    
-    # Считаем дни до конца подписки
-    days_left = 0
-    if sub.get('subscription_end'):
-        try:
-            from datetime import datetime, timezone
-            for fmt in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%S%z']:
-                try:
-                    end_dt = datetime.strptime(sub['subscription_end'], fmt)
-                    if end_dt.tzinfo is None:
-                        end_dt = end_dt.replace(tzinfo=timezone.utc)
-                    delta = end_dt - datetime.now(timezone.utc)
-                    days_left = max(0, delta.days)
-                    break
-                except ValueError:
-                    continue
-        except Exception:
-            pass
-    
-    sub['days_left'] = days_left
-    
-    # Проверяем, доступен ли trial
-    sub['trial_available'] = not bool(sub.get('trial_used', 0))
-    
-    return sub
+        
+        if not row:
+            return {
+                'subscription_type': 'free',
+                'is_active': False,
+                'days_left': 0,
+                'trial_available': True,
+                'is_promo_available': True,
+                'is_winback_eligible': False
+            }
+        
+        sub = dict(row)
+        
+        # Считаем дни до конца подписки
+        days_left = 0
+        if sub.get('subscription_end'):
+            try:
+                for fmt in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%S%z']:
+                    try:
+                        end_dt = datetime.strptime(sub['subscription_end'], fmt)
+                        if end_dt.tzinfo is None:
+                            end_dt = end_dt.replace(tzinfo=timezone.utc)
+                        delta = end_dt - datetime.now(timezone.utc)
+                        days_left = max(0, delta.days)
+                        break
+                    except ValueError:
+                        continue
+            except Exception:
+                pass
+        sub['days_left'] = days_left
+        
+        # Проверяем, доступен ли trial
+        sub['trial_available'] = not bool(sub.get('trial_used', 0))
+        
+        # 🆕 ПРОВЕРКА ДОСТУПНОСТИ ПРОМО (499₽)
+        # Промо доступно, если пользователь еще ни разу его не использовал
+        sub['is_promo_available'] = not bool(sub.get('promo_first_month_used', 0))
+        
+        # 🆕 ПРОВЕРКА ДОСТУПНОСТИ WIN-BACK (990₽)
+        # Win-back доступен, если:
+        # 1. У пользователя сейчас нет активной подписки (или она free)
+        # 2. У него есть история платных подписок (last_paid_end_date)
+        # 3. С момента окончания последней платной подписки прошло > 30 дней
+        is_winback_eligible = False
+        last_paid_end_str = sub.get('last_paid_end_date')
+        
+        if not sub.get('is_active', 0) and sub.get('subscription_type') == 'free' and last_paid_end_str:
+            try:
+                for fmt in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%S%z']:
+                    try:
+                        last_end_dt = datetime.strptime(last_paid_end_str, fmt)
+                        if last_end_dt.tzinfo is None:
+                            last_end_dt = last_end_dt.replace(tzinfo=timezone.utc)
+                        
+                        days_since_expired = (datetime.now(timezone.utc) - last_end_dt).days
+                        
+                        # Импортируем порог из конфига
+                        from config import WINBACK_THRESHOLD_DAYS
+                        if days_since_expired > WINBACK_THRESHOLD_DAYS:
+                            is_winback_eligible = True
+                        break
+                    except ValueError:
+                        continue
+            except Exception:
+                pass
+                
+        sub['is_winback_eligible'] = is_winback_eligible
+        
+        return sub
+    # ==================== ФУНКЦИИ ДЛЯ ФОНОВЫХ УВЕДОМЛЕНИЙ ====================
+
+def get_expiring_users(hours: int = 24) -> List[int]:
+    """
+    Возвращает список user_id, у которых подписка заканчивается в ближайшие N часов.
+    """
+    with _get_connection() as conn:
+        rows = conn.execute('''
+            SELECT user_id FROM subscribers 
+            WHERE is_active = 1 
+            AND subscription_end IS NOT NULL
+            AND subscription_end BETWEEN datetime('now') AND datetime('now', '+? hours')
+        ''', (hours,)).fetchall()
+        return [row[0] for row in rows]
+
+def get_winback_users() -> List[int]:
+    """
+    Возвращает список user_id, у которых платная подписка закончилась 
+    ровно от 30 до 31 дня назад (чтобы не спамить каждый час).
+    """
+    with _get_connection() as conn:
+        rows = conn.execute('''
+            SELECT user_id FROM subscribers 
+            WHERE is_active = 0 
+            AND subscription_type = 'free'
+            AND last_paid_end_date IS NOT NULL
+            AND last_paid_end_date BETWEEN datetime('now', '-31 days') AND datetime('now', '-30 days')
+        ''').fetchall()
+        return [row[0] for row in rows]

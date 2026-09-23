@@ -9,6 +9,8 @@ import sys
 import os
 import logging
 import time
+import asyncio
+import aiohttp
 
 
 # Добавляем корневую папку в путь (для импорта model.py, database.py)
@@ -30,11 +32,18 @@ from database import (
 from config import (
     LEAGUES, SUBSCRIPTION_PRICES, REFERRAL_FREE_DAYS,
     LEAGUE_TIERS, HOT_MIN_CONFIDENCE, ODDS_ACTIVE_LEAGUES, CONF_THRESHOLD,
-    ADMIN_ID
+    ADMIN_ID, YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY
 )
 from auth import verify_telegram_init_data
 from team_aliases import normalize_team_name
 from fixtures_service import get_fixtures, calc_value, calc_fair_odds, get_available_sports
+from yookassa import Payment, Configuration
+import uuid
+
+
+# Инициализация ЮKassa
+Configuration.account_id = YOOKASSA_SHOP_ID
+Configuration.secret_key = YOOKASSA_SECRET_KEY
 
 logger = logging.getLogger(__name__)
 
@@ -223,6 +232,87 @@ def load_all_models():
     print("="*80 + "\n", flush=True)
 
 
+# ==================== ФОНОВЫЕ УВЕДОМЛЕНИЯ (NOTIFICATIONS) ====================
+
+async def send_telegram_message(user_id: int, text: str, reply_markup: dict = None):
+    """Отправляет сообщение пользователю через Telegram Bot API (с поддержкой кнопок)"""
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": user_id,
+        "text": text,
+        "parse_mode": "HTML",
+        "disable_web_page_preview": True
+    }
+    # Если переданы кнопки, добавляем их в payload
+    if reply_markup:
+        payload["reply_markup"] = reply_markup
+        
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json=payload) as resp:
+                if resp.status != 200:
+                    logger.warning(f"⚠️ Не удалось отправить ТГ сообщение юзеру {user_id}: {await resp.text()}")
+    except Exception as e:
+        logger.error(f"❌ Ошибка отправки ТГ сообщения: {e}")
+
+async def notification_loop():
+    """Фоновая задача. Проверяет БД каждые 6 часов и рассылает уведомления."""
+    from database import get_expiring_users, get_winback_users
+    
+    await asyncio.sleep(60) 
+    logger.info("🔔 Фоновый цикл уведомлений запущен (проверка каждые 6 часов)")
+    
+    # Базовый URL твоего Web App
+    webapp_url = os.getenv('WEBAPP_URL', 'https://bot1-m0bm.onrender.com')
+    
+    while True:
+        try:
+            # 1. Напоминание об окончании подписки (за 24 часа)
+            expiring_users = get_expiring_users(hours=24)
+            for user_id in expiring_users:
+                text = (
+                    "⚠️ <b>Ваша подписка скоро закончится!</b>\n\n"
+                    "До окончания пробного/платного периода осталось менее 24 часов.\n"
+                    "Чтобы не потерять доступ к точным прогнозам, продлите подписку прямо сейчас."
+                )
+                # 🆕 КНОПКА С WEB APP
+                keyboard = {
+                    "inline_keyboard": [[
+                        {
+                            "text": "💎 Продлить подписку",
+                            "web_app": {"url": f"{webapp_url}/subscribe"}
+                        }
+                    ]]
+                }
+                await send_telegram_message(user_id, text, reply_markup=keyboard)
+                logger.info(f"🔔 Отправлено напоминание об окончании юзеру {user_id}")
+
+            # 2. Win-back предложение (через 30 дней после окончания)
+            winback_users = get_winback_users()
+            for user_id in winback_users:
+                text = (
+                    "🔥 <b>Давно не виделись!</b>\n\n"
+                    "Возвращайтесь в «Тактику Ставок» и получите "
+                    "<b>персональную скидку 35%</b> на первый месяц.\n\n"
+                    "💎 Вместо 1490₽ — всего <b>990₽</b> за 30 дней точных прогнозов."
+                )
+                # 🆕 КНОПКА С WEB APP (передаем параметр winback=1, чтобы фронт сразу показал скидку)
+                keyboard = {
+                    "inline_keyboard": [[
+                        {
+                            "text": "🎁 Активировать скидку 990₽",
+                            "web_app": {"url": f"{webapp_url}/subscribe?winback=1"}
+                        }
+                    ]]
+                }
+                await send_telegram_message(user_id, text, reply_markup=keyboard)
+                logger.info(f"🎁 Отправлен Win-back оффер юзеру {user_id}")
+
+        except Exception as e:
+            logger.error(f"❌ Ошибка в цикле уведомлений: {e}")
+            
+        await asyncio.sleep(6 * 60 * 60)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("\n" + "="*80, flush=True)
@@ -236,9 +326,13 @@ async def lifespan(app: FastAPI):
     load_all_models()
     
     print("\n🎉 ВСЕ ПРОЦЕДУРЫ STARTUP ЗАВЕРШЕНЫ УСПЕШНО 🎉\n", flush=True)
+
+    # 🆕 ЗАПУСКАЕМ ФОНОВЫЙ ЦИКЛ УВЕДОМЛЕНИЙ
+    notification_task = asyncio.create_task(notification_loop())
     
     yield
-    
+
+    notification_task.cancel()
     print("🛑 Завершение работы приложения...", flush=True)
 
 
@@ -323,6 +417,11 @@ def require_subscription(user: dict = Depends(get_current_user)) -> dict:
     return user
 
 # ==================== PYDANTIC МОДЕЛИ ====================
+
+class PaymentCreateRequest(BaseModel):
+    """Запрос на создание платежа"""
+    tariff: str 
+
 class MatchRequest(BaseModel):
     team1: str
     team2: str
@@ -1047,6 +1146,26 @@ def get_available_seasons(league: str, user: dict = Depends(get_current_user)):
     return sorted(df['season'].unique().tolist())
 
 
+@app.post("/api/user/cancel-subscription")
+def cancel_user_subscription(user: dict = Depends(get_current_user)):
+    """
+    Отменяет подписку пользователя (отключает доступ и автопродление).
+    Вызывается по нажатию кнопки "Отменить подписку" в Web App.
+    """
+    user_id = user['id']
+    from database import cancel_subscription
+    
+    success = cancel_subscription(user_id)
+    
+    if success:
+        logger.info(f"🛑 Юзер {user_id} отменил подписку через Web App")
+        return {
+            "success": True, 
+            "message": "Подписка успешно отменена. Доступ будет закрыт."
+        }
+    else:
+        raise HTTPException(status_code=400, detail="Не удалось отменить подписку")
+
 @app.get("/api/user/subscription")
 def get_subscription(user: dict = Depends(get_current_user)):
     """Возвращает информацию о подписке. НЕ требует активной подписки."""
@@ -1064,7 +1183,7 @@ def get_subscription(user: dict = Depends(get_current_user)):
         sub_info.get('subscription_type') == 'free'):
         
         try:
-            activate_subscription(user_id, 'trial', 3)
+            activate_subscription(user_id, 'trial', SUBSCRIPTION_PRICES['trial']['days'])
             use_trial(user_id)
             # Перечитываем информацию после активации
             sub_info = get_subscription_info(user_id)
@@ -1125,9 +1244,10 @@ def activate_trial(request: Request, user: dict = Depends(get_current_user)):
 
     if not is_trial_available(user_id):
         raise HTTPException(status_code=400, detail="Trial already used")
-    activate_subscription(user_id, 'trial', 3)
+    trial_days = SUBSCRIPTION_PRICES['trial']['days']
+    activate_subscription(user_id, 'trial', trial_days)
     use_trial(user_id)
-    return {'success': True, 'message': 'Trial activated for 3 days'}
+    return {'success': True, 'message': f'Trial activated for {trial_days} days'}
 
 
 @app.get("/api/user/referrals")
@@ -1141,6 +1261,149 @@ def get_referrals(user: dict = Depends(get_current_user)):
         'ref_link': f"https://t.me/your_bot_username?start=ref_{user_id}"
     }
 
+# ==================== ENDPOINTS: ПЛАТЕЖИ И ПОДПИСКИ ====================
+
+@app.get("/api/payments/tariffs")
+def get_available_tariffs(user: dict = Depends(get_current_user)):
+    """
+    Возвращает список тарифов, доступных для покупки КОНКРЕТНОМУ пользователю.
+    Фронтенд просто рендерит то, что пришло отсюда, не думая о логике скидок.
+    """
+    user_id = user['id']
+    create_user(user_id, user.get('username'), user.get('first_name'))
+    sub_info = get_subscription_info(user_id)
+    
+    available_tariffs = []
+    
+    for tariff_key, tariff_data in SUBSCRIPTION_PRICES.items():
+        if tariff_key == 'trial':
+            continue  # Триал не покупаем, его активируем отдельно
+            
+        # Логика фильтрации тарифов
+        if tariff_key == 'promo_month' and not sub_info.get('is_promo_available'):
+            continue  # Промо уже использован, скрываем его
+        if tariff_key == 'winback_month' and not sub_info.get('is_winback_eligible'):
+            continue  # Пользователь не подходит под винбэк, скрываем
+            
+        available_tariffs.append({
+            'key': tariff_key,
+            'name': tariff_data['name'],
+            'price': tariff_data['price'],
+            'days': tariff_data['days'],
+            'is_promo': tariff_key == 'promo_month',
+            'is_winback': tariff_key == 'winback_month'
+        })
+        
+    return {'tariffs': available_tariffs}
+
+
+@app.post("/api/payments/create")
+def create_payment(req: PaymentCreateRequest, user: dict = Depends(get_current_user)):
+    """Создает платеж в ЮKassa с проверкой доступности тарифа"""
+    user_id = user['id']
+    create_user(user_id, user.get('username'), user.get('first_name'))
+    
+    tariff = req.tariff
+    if tariff not in SUBSCRIPTION_PRICES:
+        raise HTTPException(status_code=400, detail="Неверный тариф")
+        
+    sub_info = get_subscription_info(user_id)
+    
+    # 🛡️ ЗАЩИТА ОТ ФРОДА: Проверяем, имеет ли право юзер на этот тариф
+    if tariff == 'promo_month' and not sub_info.get('is_promo_available'):
+        raise HTTPException(status_code=403, detail="Промо-тариф доступен только для первой оплаты")
+    if tariff == 'winback_month' and not sub_info.get('is_winback_eligible'):
+        raise HTTPException(status_code=403, detail="Тариф возврата сейчас недоступен для вас")
+
+    price = SUBSCRIPTION_PRICES[tariff]['price']
+    tariff_name = SUBSCRIPTION_PRICES[tariff]['name']
+    
+    # Генерируем уникальный ID для нашей БД
+    transaction_id = str(uuid.uuid4())
+    
+    # URL, на который вернется юзер после оплаты (замени на свой фронтенд)
+    return_url = f"{os.getenv('WEBAPP_URL', 'https://bot1-m0bm.onrender.com')}/payment-success"
+
+    try:
+        # Создаем платеж в ЮKassa
+        payment = Payment.create({
+            "amount": {
+                "value": str(price),
+                "currency": "RUB"
+            },
+            "confirmation": {
+                "type": "redirect",
+                "return_url": return_url
+            },
+            "description": f"Подписка «{tariff_name}» в Тактика Ставок",
+            "metadata": {
+                "user_id": str(user_id),
+                "tariff": tariff,
+                "transaction_id": transaction_id
+            }
+        }, transaction_id)
+        
+        # Сохраняем платеж в локальную БД со статусом pending
+        from database import add_payment
+        add_payment(user_id, price, 'yookassa', transaction_id, 'pending')
+        
+        logger.info(f"💳 Создан платеж {transaction_id} на {price}₽ для юзера {user_id} (тариф: {tariff})")
+        
+        return {
+            "success": True,
+            "confirmation_url": payment.confirmation.confirmation_url,
+            "payment_id": payment.id,
+            "amount": price
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Ошибка создания платежа в ЮKassa: {e}")
+        raise HTTPException(status_code=500, detail="Ошибка создания платежа. Попробуйте позже.")
+
+
+@app.post("/api/payments/webhook")
+async def payment_webhook(request: Request):
+    """
+    Вебхук от ЮKassa. Вызывается, когда пользователь успешно оплатил подписку.
+    URL вебхука нужно указать в личном кабинете ЮKassa: https://твой-домен.ru/api/payments/webhook
+    """
+    try:
+        event_data = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+
+    # Нас интересует только событие успешной оплаты
+    if event_data.get('event') == 'payment.succeeded':
+        payment_obj = event_data.get('object', {})
+        metadata = payment_obj.get('metadata', {})
+        
+        transaction_id = metadata.get('transaction_id')
+        user_id_str = metadata.get('user_id')
+        tariff = metadata.get('tariff')
+
+        if not all([transaction_id, user_id_str, tariff]):
+            logger.error("⚠️ В вебхуке отсутствуют необходимые metadata")
+            return {"status": "error", "message": "Missing metadata"}
+
+        user_id = int(user_id_str)
+        
+        try:
+            # 1. Обновляем статус платежа в нашей БД
+            from database import update_payment_status, activate_subscription
+            update_payment_status(transaction_id, 'succeeded')
+            
+            # 2. Активируем подписку (внутри activate_subscription уже есть логика 
+            # для записи last_paid_end_date и promo_first_month_used!)
+            days = SUBSCRIPTION_PRICES[tariff]['days']
+            activate_subscription(user_id, tariff, days)
+            
+            logger.info(f"✅ УСПЕХ: Юзер {user_id} оплатил тариф {tariff} на {days} дней. Платеж {transaction_id}")
+            
+        except Exception as e:
+            logger.error(f"❌ Ошибка обработки вебхука для платежа {transaction_id}: {e}")
+            return {"status": "error", "message": "Internal DB error"}
+
+    return {"status": "ok"}
 
 # ==================== ЗАПУСК ====================
 if __name__ == "__main__":

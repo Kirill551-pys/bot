@@ -103,14 +103,23 @@ def get_season_start(league_key: str, default: str = "2025-08-01") -> str:
     """Возвращает дату начала сезона для лиги"""
     return SEASON_2025_START.get(league_key, default)
 
-# ==================== ТАРИФЫ ПОДПИСКИ ====================
+# ==================== ТАРИФЫ ПОДПИСКИ (НОВАЯ МОДЕЛЬ МОНЕТИЗАЦИИ) ====================
 SUBSCRIPTION_PRICES = {
-    'trial': {'days': 3, 'price': 0, 'name': 'Пробный'},
-    'weekly': {'days': 7, 'price': 149, 'name': 'Неделя'},
-    'monthly': {'days': 30, 'price': 399, 'name': 'Месяц'},
-    'quarter': {'days': 90, 'price': 999, 'name': 'Квартал'},
-    'lifetime': {'days': 3650, 'price': 3990, 'name': 'Навсегда'}
+    'trial': {'days': 5, 'price': 0, 'name': 'Пробный (5 дней)'},
+    'promo_month': {'days': 30, 'price': 499, 'name': 'Первый месяц (Промо)'},
+    'regular_month': {'days': 30, 'price': 1490, 'name': 'Месяц (Стандарт)'},
+    'winback_month': {'days': 30, 'price': 990, 'name': 'Возврат (Скидка 35%)'},
+    'quarter': {'days': 90, 'price': 3990, 'name': 'Квартал'},
 }
+
+# ==================== КОНСТАНТЫ ДЛЯ ЛОГИКИ СКИДОК ====================
+# Порог для Win-back: если подписка закончилась более N дней назад, даем скидку
+WINBACK_THRESHOLD_DAYS = 30
+
+# Цены для быстрого доступа в коде (если потребуется)
+PRICE_REGULAR = 1490
+PRICE_PROMO_FIRST_MONTH = 499
+PRICE_WINBACK = 990
 
 # ==================== РЕФЕРАЛЬНАЯ ПРОГРАММА ====================
 REFERRAL_BONUS_PERCENT = 15  # 15% от первой оплаты реферала
