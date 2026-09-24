@@ -3,9 +3,12 @@
 ✅ Минималистичный и стабильный бот-шлюз в Web App
 ✅ Весь функционал (прогнозы, статистика, подписки) находится внутри приложения
 ✅ Мгновенный запуск без риска ошибок импорта
+✅ Настроен обход блокировок через локальный Xray-прокси
 """
 import logging
 import os
+import asyncio
+
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters.command import Command
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
@@ -23,14 +26,15 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ==================== ИНИЦИАЛИЗАЦИЯ ====================
+# 🔥 Настройка прокси для обхода блокировок Telegram (Xray на порту 10808)
 PROXY_URL = "socks5://127.0.0.1:10808"
 session = AiohttpSession(proxy=PROXY_URL)
 
 bot = Bot(token=BOT_TOKEN, session=session)
 dp = Dispatcher()
 
-# URL твоего Web App (берём из переменных окружения или используем дефолтный)
-WEBAPP_URL = os.getenv("WEBAPP_URL", "https://bot1-m0bm.onrender.com")
+# URL берём из .env. Если переменной нет, используем наш новый HTTPS домен как безопасный fallback
+WEBAPP_URL = os.getenv("WEBAPP_URL", "https://tactika-bot.ru")
 
 
 def get_main_menu() -> ReplyKeyboardMarkup:
@@ -57,9 +61,9 @@ async def cmd_start(message: types.Message):
     await message.answer(
         "⚽ <b>Добро пожаловать в Тактику Ставок!</b>\n\n"
         "📱 <b>Весь функционал доступен в нашем приложении:</b>\n"
-        "🔥 Горячие прогнозы с высокой уверенностью\n"
+        "🔥 Горячие разборы матчей\n"
         "📊 Расширенная статистика по 20+ лигам\n"
-        "🎯 Прогнозы на угловые, карточки, удары и фолы\n"
+        "🎯 Разбор матчей на угловые, карточки, удары и фолы\n"
         "💎 Удобное управление подпиской\n\n"
         "Нажмите кнопку ниже, чтобы начать 👇",
         reply_markup=get_main_menu(),
@@ -76,9 +80,9 @@ async def cmd_help(message: types.Message):
         "📚 <b>Как пользоваться:</b>\n\n"
         "1️⃣ Нажмите кнопку <b>🚀 Открыть приложение</b>\n"
         "2️⃣ Выберите интересующую лигу и матч\n"
-        "3️⃣ Получите детальный прогноз с вероятностями\n\n"
+        "3️⃣ Получите детальный разбор с вероятностями\n\n"
         "💡 <i>Все данные обновляются в реальном времени.</i>\n\n"
-        "⚠️ <i>Прогнозы носят информационный характер. Ставьте ответственно!</i>\n\n"
+        "⚠️ <i>Разбор матчей носят информационный характер !</i>\n\n"
         "📄 <a href='https://telegra.ph/Oferta-Taktika-Stavok-09-01'>Публичная оферта</a>\n"
         "🔐 <a href='https://telegra.ph/Politika-PDn-Taktika-Stavok-09-01'>Политика ПДн</a>\n"
         "💬 <a href='https://t.me/Tactika_Stavok_bot'>Поддержка</a>",
@@ -112,6 +116,7 @@ async def cmd_stats(message: types.Message):
         parse_mode="HTML"
     )
 
+
 @dp.message(Command("bot_stats"))
 async def cmd_bot_stats(message: types.Message):
     """Статистика бота — только для админа. Считает напрямую через SQL."""
@@ -122,7 +127,7 @@ async def cmd_bot_stats(message: types.Message):
     
     logger.info(f"✅ Команда /bot_stats от админа {message.from_user.id}")
     
-    # Считаем статистику напрямую через SQL — без импорта функций из database.py
+    # Считаем статистику напрямую через SQL — без импорта функций из database.py во избежание циклических зависимостей
     try:
         from database import _get_connection
         
@@ -172,17 +177,18 @@ async def cmd_bot_stats(message: types.Message):
         "📊 <b>Статистика бота «Тактика Ставок»</b>\n\n"
         f"👥 <b>Всего пользователей:</b> {total_users:,}\n"
         f"💎 <b>Активных подписок:</b> {active_subs:,}\n"
-        f" <b>На trial:</b> {trials:,}\n"
+        f"🎁 <b>На trial:</b> {trials:,}\n"
         f"💰 <b>Платных VIP:</b> {paid_subs:,}\n"
         f"💳 <b>Всего платежей:</b> {total_payments:,}\n"
-        f" <b>Выручка:</b> {total_revenue:,.0f} ₽\n\n"
+        f"💵 <b>Выручка:</b> {total_revenue:,.0f} ₽\n\n"
         f"🤖 <b>Бот:</b> @Tactika_Stavok_bot\n"
-        f" <b>Web App:</b> {WEBAPP_URL}\n"
-        f" <b>Админ:</b> {message.from_user.id}",
+        f"🌐 <b>Web App:</b> {WEBAPP_URL}\n"
+        f"👑 <b>Админ:</b> {message.from_user.id}",
         parse_mode="HTML"
     )
     
-# 🪤 ЛОВУШКА: логирует любые другие сообщения, чтобы мы видели, что бот жив
+
+# 🪤 ЛОВУШКА: логирует любые другие текстовые сообщения, чтобы мы видели, что бот жив и слушает
 @dp.message()
 async def catch_all_messages(message: types.Message):
     logger.info(f"⚠️ Получено текстовое сообщение: '{message.text}' от {message.from_user.id}")
@@ -201,8 +207,7 @@ async def main():
 
 
 if __name__ == "__main__":
-    import asyncio
-    # Отлавливаем Ctrl+C для корректного завершения
+    # Отлавливаем Ctrl+C для корректного и безопасного завершения
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
