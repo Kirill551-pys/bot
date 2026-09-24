@@ -9,6 +9,7 @@ import os
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters.command import Command
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
+from aiogram.client.session.aiohttp import AiohttpSession
 
 # Импортируем только то, что точно есть в config.py
 from config import BOT_TOKEN, ADMIN_ID
@@ -22,7 +23,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ==================== ИНИЦИАЛИЗАЦИЯ ====================
-bot = Bot(token=BOT_TOKEN)
+PROXY_URL = "socks5://127.0.0.1:10808"
+session = AiohttpSession(proxy=PROXY_URL)
+
+bot = Bot(token=BOT_TOKEN, session=session)
 dp = Dispatcher()
 
 # URL твоего Web App (берём из переменных окружения или используем дефолтный)
@@ -30,25 +34,19 @@ WEBAPP_URL = os.getenv("WEBAPP_URL", "https://bot1-m0bm.onrender.com")
 
 
 def get_main_menu() -> ReplyKeyboardMarkup:
-    """Главное меню с кнопками открытия Web App и отмены подписки"""
+    """Главное меню с кнопкой открытия Web App"""
     return ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(
                 text="🚀 Открыть приложение",
                 web_app=WebAppInfo(url=WEBAPP_URL)
             )],
-            [
-                KeyboardButton(text="💎 Подписка", web_app=WebAppInfo(url=f"{WEBAPP_URL}/subscribe")),
-                KeyboardButton(text="📊 Статистика", web_app=WebAppInfo(url=f"{WEBAPP_URL}/stats"))
-            ],
-            [
-                KeyboardButton(text="🛑 Отменить подписку"), # ← Новая кнопка
-                KeyboardButton(text="❓ Помощь")
-            ]
+            [KeyboardButton(text="❓ Помощь")]
         ],
         resize_keyboard=True,
         input_field_placeholder="Выберите действие..."
     )
+
 
 # ==================== ОБРАБОТЧИКИ КОМАНД ====================
 
@@ -183,75 +181,7 @@ async def cmd_bot_stats(message: types.Message):
         f" <b>Админ:</b> {message.from_user.id}",
         parse_mode="HTML"
     )
-
-
-@dp.message(Command("subscribe"))
-async def cmd_subscribe(message: types.Message):
-    """Обработчик команды /subscribe — открывает экран управления подпиской в Web App"""
-    logger.info(f"✅ Команда /subscribe от пользователя {message.from_user.id}")
-    subscribe_url = f"{WEBAPP_URL}/subscribe"
     
-    await message.answer(
-        "💎 <b>Управление подпиской</b>\n\n"
-        "Здесь вы можете:\n"
-        "• Проверить статус текущей подписки\n"
-        "• Активировать промо-код\n"
-        "• Оформить подписку со скидкой\n\n"
-        "Нажмите кнопку ниже, чтобы открыть экран 👇",
-        reply_markup=types.InlineKeyboardMarkup(inline_keyboard=[
-            [types.InlineKeyboardButton(
-                text="🚀 Открыть экран подписки",
-                web_app=types.WebAppInfo(url=subscribe_url)
-            )]
-        ]),
-        parse_mode="HTML"
-    )
-
-@dp.message(Command("cancel"))
-async def cmd_cancel_subscription(message: types.Message):
-    """Обработчик команды /cancel — отмена подписки"""
-    user_id = message.from_user.id
-    logger.info(f"🛑 Команда /cancel от пользователя {user_id}")
-    
-    from database import cancel_subscription
-    success = cancel_subscription(user_id)
-    
-    if success:
-        await message.answer(
-            "🛑 <b>Подписка отменена</b>\n\n"
-            "Ваш доступ к платным прогнозам закрыт. "
-            "Мы будем рады видеть вас снова!\n\n"
-            "Вы всегда можете возобновить подписку, нажав кнопку «💎 Подписка» в меню.",
-            reply_markup=get_main_menu(),
-            parse_mode="HTML"
-        )
-    else:
-        await message.answer(
-            "⚠️ У вас нет активной подписки или произошла ошибка. "
-            "Если проблема сохраняется, напишите в поддержку.",
-            reply_markup=get_main_menu()
-        )    
-
-@dp.message(F.text == "🛑 Отменить подписку")
-async def cancel_subscription_button(message: types.Message):
-    """Обработка нажатия кнопки отмены подписки из меню"""
-    # Просто вызываем ту же логику, что и для команды /cancel
-    user_id = message.from_user.id
-    logger.info(f"🛑 Кнопка отмены подписки нажата юзером {user_id}")
-    
-    from database import cancel_subscription
-    success = cancel_subscription(user_id)
-    
-    if success:
-        await message.answer(
-            "✅ <b>Подписка успешно отменена.</b>\n\n"
-            "Доступ к прогнозам закрыт. Спасибо, что были с нами!",
-            reply_markup=get_main_menu(),
-            parse_mode="HTML"
-        )
-    else:
-        await message.answer("ℹ️ У вас сейчас нет активной подписки.", reply_markup=get_main_menu())
-
 # 🪤 ЛОВУШКА: логирует любые другие сообщения, чтобы мы видели, что бот жив
 @dp.message()
 async def catch_all_messages(message: types.Message):
