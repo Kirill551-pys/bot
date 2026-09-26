@@ -466,3 +466,48 @@ def get_winback_users() -> List[int]:
             AND last_paid_end_date BETWEEN datetime('now', '-31 days') AND datetime('now', '-30 days')
         ''').fetchall()
         return [row[0] for row in rows]
+
+
+def activate_subscription(user_id: int, tariff: str, days: int) -> bool:
+    """
+    Активирует или продлевает подписку пользователя.
+    Если подписка уже есть, дни прибавляются к текущей дате окончания.
+    """
+    try:
+        with _get_connection() as conn:
+            # Проверяем текущую подписку
+            cursor = conn.execute(
+                "SELECT subscription_end FROM subscribers WHERE telegram_id = ?", 
+                (user_id,)
+            )
+            row = cursor.fetchone()
+            
+            now = datetime.now()
+            if row and row[0]:
+                # Если подписка есть, прибавляем дни к текущей дате окончания
+                current_end = datetime.fromisoformat(row[0])
+                # Если подписка уже истекла, начинаем отсчет с сегодняшнего дня
+                start_date = current_end if current_end > now else now
+            else:
+                # Если подписки нет, начинаем с сегодняшнего дня
+                start_date = now
+                
+            new_end = start_date + timedelta(days=days)
+            
+            # Обновляем или вставляем запись
+            conn.execute("""
+                INSERT INTO subscribers (telegram_id, subscription_type, is_active, subscription_end)
+                VALUES (?, ?, 1, ?)
+                ON CONFLICT(telegram_id) DO UPDATE SET
+                    subscription_type = excluded.subscription_type,
+                    is_active = 1,
+                    subscription_end = excluded.subscription_end
+            """, (user_id, tariff, new_end.isoformat()))
+            
+            conn.commit()
+            logger.info(f"✅ Подписка активирована для user {user_id} на {days} дней (до {new_end})")
+            return True
+            
+    except Exception as e:
+        logger.error(f"❌ Ошибка активации подписки: {e}")
+        return False

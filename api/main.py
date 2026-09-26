@@ -427,6 +427,17 @@ class MatchRequest(BaseModel):
     team2: str
     league: str
 
+class PaymentRequest(BaseModel):
+    """Запрос на создание платежа из Web App"""
+    tariff: str
+    amount: float
+
+class PaymentResponse(BaseModel):
+    """Ответ с ссылкой на оплату"""
+    payment_id: str
+    confirmation_url: str
+    amount: float
+    tariff: str
 
 class PredictionResponse(BaseModel):
     home_team: str
@@ -1404,6 +1415,63 @@ async def payment_webhook(request: Request):
             return {"status": "error", "message": "Internal DB error"}
 
     return {"status": "ok"}
+
+# ==================== ENDPOINTS: ПЛАТЕЖИ ЮKASSA ====================
+
+@app.post("/api/payment/create", response_model=PaymentResponse)
+def create_payment_endpoint(req: PaymentRequest, user: dict = Depends(get_current_user)):
+    """Создаёт платёж в ЮKassa и возвращает ссылку на оплату."""
+    from api.payment_service import create_payment, TARIFF_DAYS
+    from config import SUBSCRIPTION_PRICES
+    
+    user_id = user.get('id')
+    tariff = req.tariff
+    
+    if tariff not in TARIFF_DAYS:
+        raise HTTPException(status_code=400, detail=f"Неизвестный тариф: {tariff}")
+    if tariff not in SUBSCRIPTION_PRICES:
+        raise HTTPException(status_code=400, detail=f"Тариф не найден в конфиге: {tariff}")
+    
+    price = SUBSCRIPTION_PRICES[tariff]['price']
+    days = TARIFF_DAYS[tariff]
+    tariff_name = SUBSCRIPTION_PRICES[tariff]['name']
+    
+    try:
+        payment_data = create_payment(
+            user_id=user_id,
+            tariff=tariff,
+            amount=price,
+            description=f"Оплата подписки '{tariff_name}' ({days} дней) в Tactika Stavok"
+        )
+        return PaymentResponse(**payment_data)
+    except Exception as e:
+        logger.error(f"Ошибка создания платежа: {e}")
+        raise HTTPException(status_code=500, detail="Не удалось создать платёж")
+
+
+@app.post("/api/payment/webhook")
+def yookassa_webhook(request: Request):
+    """Webhook эндпоинт для получения уведомлений от ЮKassa."""
+    from api.payment_service import handle_webhook
+    from database import activate_subscription
+    
+    try:
+        event = request.json()
+        result = handle_webhook(event)
+        
+        if result.get("status") == "success":
+            user_id = result["user_id"]
+            tariff = result["tariff"]
+            days = result["days"]
+            
+            activate_subscription(user_id, tariff, days)
+            logger.info(f"✅ Подписка активирована для user {user_id}, тариф {tariff}, {days} дней")
+        
+        return {"status": "ok"}
+        
+    except Exception as e:
+        logger.error(f"Ошибка webhook: {e}")
+        return {"status": "error", "error": str(e)}
 
 # ==================== ЗАПУСК ====================
 if __name__ == "__main__":
