@@ -176,6 +176,14 @@ export interface UserSubscription {
   created_at: string;
 }
 
+// 🆕 ИНТЕРФЕЙС: Ответ от ЮKassa при создании платежа
+export interface PaymentResponse {
+  payment_id: string;
+  confirmation_url: string;
+  amount: number;
+  tariff: string;
+}
+
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;
@@ -439,6 +447,20 @@ class ApiClient {
     } catch (error) {
       console.error('Ошибка получения истории:', error);
       return [];
+    }
+  }
+
+  //  СОЗДАНИЕ ПЛАТЕЖА ЧЕРЕЗ ЮKASSA
+  async createPayment(tariff: string, amount: number): Promise<PaymentResponse> {
+    try {
+      const response = await this.client.post<PaymentResponse>(
+        '/api/payment/create',
+        { tariff, amount }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Ошибка создания платежа:', error);
+      throw new Error('Не удалось создать платёж');
     }
   }
 }

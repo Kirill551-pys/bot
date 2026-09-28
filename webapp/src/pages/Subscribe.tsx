@@ -25,14 +25,69 @@ export function Subscribe() {
     }
   });
 
+  // 🆕 Мутация для создания платежа через ЮKassa
+  const paymentMutation = useMutation({
+    mutationFn: ({ tariff, amount }: { tariff: string; amount: number }) => 
+      api.createPayment(tariff, amount),
+    onSuccess: (data) => {
+      hapticFeedback('success');
+      // Открываем страницу оплаты ЮKassa
+      if (data.confirmation_url) {
+        // Используем Telegram WebApp для открытия ссылки
+        // Приводим к any, чтобы обойти строгую проверку типов (типы Telegram иногда отстают)
+        if (window.Telegram?.WebApp) {
+          (window.Telegram.WebApp as any).openLink(data.confirmation_url);
+        } else {
+          // Fallback для обычного браузера
+          window.open(data.confirmation_url, '_blank');
+        }
+        showPopup('💳 Переходим к оплате...');
+      }
+    },
+    onError: (error: any) => {
+      hapticFeedback('error');
+      const errorMsg = error.response?.data?.detail || 'Не удалось создать платёж. Попробуйте позже.';
+      showPopup('❌ ' + errorMsg);
+    }
+  });
+
+  // 🆕 Тарифы с ключами, которые совпадают с бэкендом (config.py)
   const tariffs = [
-    { key: 'monthly', name: 'Месяц', price: 499, days: 30, icon: '📆', popular: true, perDay: 13 },
-    { key: 'quarter', name: 'Квартал', price: 1399, days: 90, icon: '🗓️', perDay: 11 },
+    { 
+      key: 'promo_month', 
+      name: 'Первый месяц (Промо)', 
+      price: 499, 
+      days: 30, 
+      icon: '🎁', 
+      popular: true, 
+      perDay: 17,
+      description: 'Специальная цена для новых пользователей'
+    },
+    { 
+      key: 'regular_month', 
+      name: 'Месяц (Стандарт)', 
+      price: 1490, 
+      days: 30, 
+      icon: '📆', 
+      popular: false, 
+      perDay: 50,
+      description: 'Полный доступ на 30 дней'
+    },
+    { 
+      key: 'quarter', 
+      name: 'Квартал', 
+      price: 3990, 
+      days: 90, 
+      icon: '🗓️', 
+      popular: false, 
+      perDay: 44,
+      description: 'Выгода 11% по сравнению с месячным'
+    },
   ];
 
-  const handlePayment = (tariffKey: string) => {
+  const handlePayment = (tariffKey: string, price: number) => {
     hapticFeedback('medium');
-    showPopup(`💳 Оплата «${tariffs.find(t => t.key === tariffKey)?.name}» — скоро будет доступна!`);
+    paymentMutation.mutate({ tariff: tariffKey, amount: price });
   };
 
   const isActive = subscription && subscription.subscription_type !== 'free';
@@ -40,7 +95,7 @@ export function Subscribe() {
   return (
     <div className="p-4 space-y-5 max-w-lg mx-auto pb-28">
       <h1 className="text-[22px] font-extrabold text-white animate-fade-up">💎 Подписка</h1>
-
+      
       {/* ===== Статус ===== */}
       <div className="card animate-fade-up delay-1 relative overflow-hidden">
         {isActive && (
@@ -97,7 +152,6 @@ export function Subscribe() {
       {/* ===== Тарифы ===== */}
       <div className="space-y-3 animate-fade-up delay-3">
         <h2 className="font-extrabold text-[16px] text-white px-1">📋 Тарифы</h2>
-
         {tariffs.map((tariff, idx) => (
           <div
             key={tariff.key}
@@ -111,13 +165,15 @@ export function Subscribe() {
                 </span>
               </div>
             )}
-
             <div className="flex justify-between items-start mb-3">
               <div className="flex items-center gap-3">
                 <span className="text-2xl">{tariff.icon}</span>
                 <div>
                   <p className="font-extrabold text-white text-[16px]">{tariff.name}</p>
                   <p className="text-[12px] text-[#8b9baa]">{tariff.days} дней доступа</p>
+                  {tariff.description && (
+                    <p className="text-[11px] text-[#8b9baa] mt-0.5">{tariff.description}</p>
+                  )}
                 </div>
               </div>
               <div className="text-right">
@@ -155,14 +211,22 @@ export function Subscribe() {
               </span>
             </label>
             <button
-              onClick={() => handlePayment(tariff.key)}
-              className={`w-full py-3 rounded-xl font-bold text-[14px] transition-all active:scale-[.96] ${
+              onClick={() => handlePayment(tariff.key, tariff.price)}
+              disabled={paymentMutation.isPending}
+              className={`w-full py-3 rounded-xl font-bold text-[14px] transition-all active:scale-[.96] mt-3 ${
                 tariff.popular
                   ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/25'
                   : 'bg-white/5 text-white border border-white/10'
-              }`}
+              } ${paymentMutation.isPending ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              💳 Оплатить
+              {paymentMutation.isPending ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Создаём платёж...
+                </span>
+              ) : (
+                <>💳 Оплатить {tariff.price}₽</>
+              )}
             </button>
             <p className="text-[10px] text-[#8b9baa] leading-relaxed mt-3 text-center">
               Нажимая «Оплатить», вы принимаете{' '}
