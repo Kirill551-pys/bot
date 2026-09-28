@@ -312,47 +312,48 @@ def get_user_payments(user_id: int, limit: int = 10) -> List[Dict]:
 
 def is_subscription_active(user_id: int) -> bool:
     """
-    Проверяет, есть ли у пользователя активная подписка ИЛИ trial.
+    Проверяет, есть ли у пользователя активная платная подписка или trial.
     Администратор (ADMIN_ID) всегда имеет полный доступ.
     """
     from config import ADMIN_ID
-    
+
     #  АДМИН ВСЕГДА ИМЕЕТ ДОСТУП
     if user_id == ADMIN_ID:
         return True
-    
+
     with _get_connection() as conn:
         row = conn.execute(
-            '''SELECT is_active, subscription_type, subscription_end 
+            '''SELECT is_active, subscription_type, subscription_end
                FROM subscribers WHERE user_id = ?''',
             (user_id,)
         ).fetchone()
-    
-    if not row:
-        return False
-    
-    is_active, sub_type, sub_end = row
-    
-    if not is_active:
-        return False
-    
-    if sub_end:
-        try:
-            from datetime import datetime, timezone
-            for fmt in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%S%z']:
-                try:
-                    end_dt = datetime.strptime(sub_end, fmt)
-                    if end_dt.tzinfo is None:
-                        end_dt = end_dt.replace(tzinfo=timezone.utc)
-                    if end_dt < datetime.now(timezone.utc):
-                        return False
-                    break
-                except ValueError:
-                    continue
-        except Exception:
-            pass
-    
-    return True
+        
+        if not row:
+            return False
+            
+        is_active, sub_type, sub_end = row
+        
+        # Если тип подписки 'free', доступа нет (даже если is_active = 1)
+        if sub_type == 'free':
+            return False
+            
+        # Если подписка истекла
+        if sub_end:
+            try:
+                for fmt in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%S%z']:
+                    try:
+                        end_dt = datetime.strptime(sub_end, fmt)
+                        if end_dt.tzinfo is None:
+                            end_dt = end_dt.replace(tzinfo=timezone.utc)
+                        if end_dt < datetime.now(timezone.utc):
+                            return False
+                        break
+                    except ValueError:
+                        continue
+            except Exception:
+                pass
+                
+        return bool(is_active)
 
 
 def get_subscription_info(user_id: int) -> dict:
@@ -380,6 +381,10 @@ def get_subscription_info(user_id: int) -> dict:
             }
         
         sub = dict(row)
+        
+        # 🆕 ИСПРАВЛЕНИЕ: Если тип 'free', принудительно ставим is_active = False
+        if sub.get('subscription_type') == 'free':
+            sub['is_active'] = 0
         
         # Считаем дни до конца подписки
         days_left = 0
