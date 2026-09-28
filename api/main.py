@@ -1179,29 +1179,17 @@ def cancel_user_subscription(user: dict = Depends(get_current_user)):
 
 @app.get("/api/user/subscription")
 def get_subscription(user: dict = Depends(get_current_user)):
-    """Возвращает информацию о подписке. НЕ требует активной подписки."""
-    from database import is_subscription_active
-    
+    """
+    Возвращает информацию о подписке. 
+    НЕ требует активной подписки и НЕ активирует триал молча.
+    """
     user_id = user['id']
+    
+    # Создаем пользователя в БД, если его еще нет (по умолчанию там будет 'free')
     create_user(user_id, user.get('username'), user.get('first_name'))
     
+    # Просто возвращаем текущий статус из базы данных
     sub_info = get_subscription_info(user_id)
-    
-    # 🆕 АВТОАКТИВАЦИЯ TRIAL при первом входе
-    # Если trial доступен и подписки нет — активируем автоматически
-    if (sub_info.get('trial_available') and 
-        not sub_info.get('is_active') and
-        sub_info.get('subscription_type') == 'free'):
-        
-        try:
-            activate_subscription(user_id, 'trial', SUBSCRIPTION_PRICES['trial']['days'])
-            use_trial(user_id)
-            # Перечитываем информацию после активации
-            sub_info = get_subscription_info(user_id)
-            sub_info['trial_just_activated'] = True
-        except Exception as e:
-            logger.warning(f"️ Не удалось активировать trial для user {user_id}: {e}")
-    
     return sub_info
 
 @app.get("/api/user/me")
