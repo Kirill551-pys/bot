@@ -851,11 +851,20 @@ def load_matches_data(data_path: str) -> Optional[pd.DataFrame]:
         rename_map['FTHG'] = 'home_goals'
     elif 'HG' in df.columns and 'home_goals' not in df.columns: 
         rename_map['HG'] = 'home_goals'
+    elif 'FTHome' in df.columns and 'home_goals' not in df.columns: # <--- НОВОЕ
+        rename_map['FTHome'] = 'home_goals'
 
     if 'FTAG' in df.columns and 'away_goals' not in df.columns: 
         rename_map['FTAG'] = 'away_goals'
     elif 'AG' in df.columns and 'away_goals' not in df.columns: 
         rename_map['AG'] = 'away_goals'
+    elif 'FTAway' in df.columns and 'away_goals' not in df.columns: # <--- НОВОЕ
+        rename_map['FTAway'] = 'away_goals'
+
+    if 'FTR' in df.columns and 'result' not in df.columns:
+        rename_map['FTR'] = 'result'
+    elif 'FTResult' in df.columns and 'result' not in df.columns: # <--- НОВОЕ
+        rename_map['FTResult'] = 'result'
 
     stat_mappings = {
         'HS': 'home_shots', 'AS': 'away_shots',
@@ -864,7 +873,14 @@ def load_matches_data(data_path: str) -> Optional[pd.DataFrame]:
         'HY': 'home_yellows', 'AY': 'away_yellows',
         'HF': 'home_fouls', 'AF': 'away_fouls',
         'HTHG': 'ht_home_goals', 'HTAG': 'ht_away_goals',
-        'HTR': 'ht_result'
+        'HTR': 'ht_result','HomeShots': 'home_shots', 'AwayShots': 'away_shots',
+        'HomeTarget': 'home_shots_on_target', 'AwayTarget': 'away_shots_on_target',
+        'HomeFouls': 'home_fouls', 'AwayFouls': 'away_fouls',
+        'HomeCorners': 'home_corners', 'AwayCorners': 'away_corners',
+        'HomeYellow': 'home_yellows', 'AwayYellow': 'away_yellows',
+        'HomeRed': 'home_reds', 'AwayRed': 'away_reds',
+        'HTHome': 'ht_home_goals', 'HTAway': 'ht_away_goals',
+        'HTResult': 'ht_result'
     }
     for src, dst in stat_mappings.items():
         if src in df.columns and dst not in df.columns:
