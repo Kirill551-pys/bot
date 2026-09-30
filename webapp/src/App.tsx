@@ -10,6 +10,8 @@ import { Prediction } from './pages/Prediction';
 import { Stats } from './pages/Stats';
 import { Subscribe } from './pages/Subscribe';
 import './styles/globals.css';
+import { ProtectedRoute } from './components/ProtectedRoute';
+
 
 /* ============================================
    НАСТРОЙКА КЕШИРОВАНИЯ ЗАПРОСОВ
@@ -129,8 +131,16 @@ function App() {
           <div className="min-h-screen bg-[#0f1923] pb-28 safe-top">
             <Routes>
               <Route path="/" element={<Home />} />
-              <Route path="/prediction" element={<Prediction />} />
-              <Route path="/stats" element={<Stats />} />
+              <Route path="/prediction" element={
+                <ProtectedRoute>
+                  <Prediction />
+                </ProtectedRoute>
+                } />
+              <Route path="/stats" element={
+                <ProtectedRoute>
+                  <Stats />
+                </ProtectedRoute>
+              } />
               <Route path="/subscribe" element={<Subscribe />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

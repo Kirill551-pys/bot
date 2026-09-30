@@ -148,7 +148,7 @@ export function Subscribe() {
       </div>
 
       {/* ===== Пробный период ===== */}
-      {subscription?.subscription_type === 'free' && (
+      {subscription?.subscription_type === 'free' && !subscription?.is_active && (
         <button
           onClick={() => trialMutation.mutate()}
           disabled={trialMutation.isPending}

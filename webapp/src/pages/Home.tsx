@@ -53,7 +53,7 @@ export function Home() {
         <div className="pointer-events-none absolute -bottom-16 -left-10 w-44 h-44 rounded-full bg-black/10" />
         <div className="relative">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-[17px] font-extrabold text-white"> Горячий прогноз</h2>
+            <h2 className="text-[17px] font-extrabold text-white"> Горячий разбор матчей</h2>
             <span className="live-badge">LIVE</span>
           </div>
           {/* 🆕 БЛОК ОШИБКИ — когда сервер спит */}
@@ -179,7 +179,7 @@ export function Home() {
                 onClick={() => hapticFeedback('medium')}
                 className="mt-4 block w-full rounded-xl bg-white text-orange-600 text-center text-[15px] font-extrabold py-3 active:scale-[.96] transition-transform shadow-lg"
               >
-                Смотреть прогноз →
+                Смотреть разбор матча →
               </Link>
               {/* 🆕 КНОПКА: следующий hot-прогноз */}
               {hasMore && (
@@ -190,7 +190,7 @@ export function Home() {
                   }}
                   className="mt-2 block w-full rounded-xl bg-white/15 text-white text-center text-[14px] font-bold py-2.5 active:scale-[.96] transition-transform"
                 >
-                   Следующий прогноз ({safeIndex + 1}/{hotList!.length})
+                   Следующий разбор ({safeIndex + 1}/{hotList!.length})
                 </button>
               )}
             </>
@@ -204,7 +204,7 @@ export function Home() {
                 onClick={() => hapticFeedback('medium')}
                 className="block w-full rounded-xl bg-white text-orange-600 text-center text-[15px] font-extrabold py-3 active:scale-[.96] transition-transform shadow-lg"
               >
-                Выбрать матч →
+                {has_access || is_admin ? "Смотреть разбор матча →" : "🔒 Оформить подписку →"}
               </Link>
             </>
           )}
@@ -226,7 +226,7 @@ export function Home() {
           <span className="action-icon bg-blue-500/15"></span>
           <p className="font-bold text-[15px] text-white mt-3">Выбрать матч</p>
           <p className="text-[12px] text-[#8b9baa] mt-0.5">
-            {has_access || is_admin ? 'AI-прогноз на матч' : '🔒 По подписке'}
+            {has_access || is_admin ? 'AI-разбор на матч' : '🔒 По подписке'}
           </p>
         </Link>
         <Link
@@ -293,7 +293,7 @@ export function Home() {
           <div className="flex items-center gap-4">
             <span className="text-3xl animate-float">💎</span>
             <div>
-              <p className="font-bold text-white text-[15px]">Открой все прогнозы</p>
+              <p className="font-bold text-white text-[15px]">Открой все разборы матчей </p>
               <p className="text-[13px] text-[#8b9baa] mt-0.5">Подписка от 149₽/нед</p>
             </div>
             <span className="ml-auto text-purple-400 text-xl">→</span>
