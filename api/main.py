@@ -56,7 +56,7 @@ HOT_CACHE: dict = {
     'expires_at': 0.0,      # Время, когда кэш устареет (timestamp в секундах)
     'lock': False,          # Флаг блокировки: True если кто-то уже пересчитывает кэш
 }
-HOT_CACHE_TTL = 30 * 60     # 30 минут в секундах    # Время жизни кэша: 5 минут (300 секунд)
+HOT_CACHE_TTL = 4 * 60 * 60  # 4 часа в секундах (14400 секунд)
 
 # ==================== main.py ====================
 # ... существующие импорты ...
@@ -637,51 +637,78 @@ def _extract_additional_markets(prediction: dict, odds: dict = None) -> List[dic
 
 
 def _set_hot_bet(best_match: dict) -> dict:
-    """Выбирает hot_bet на основе VALUE (исход/тотал с value → доп. рынок → фаворит)."""
-    result_probs = best_match.get('result', {})
+    """
+    Выбирает hot_bet на основе МАКСИМАЛЬНОГО VALUE SCORE.
+    Смотрит на все рынки: исходы, тоталы, угловые, карточки, удары.
+    """
     odds = best_match.get('odds', {}) or {}
     candidates = []
-
-    # 1. ИСХОДЫ 1X2
+    
+    # === 1. ИСХОДЫ 1X2 ===
+    result_probs = best_match.get('result', {})
     for res_key, odds_key, label in [
         ('Home Win', 'home_win', f"П1 ({best_match.get('home_team', '')})"),
         ('Draw', 'draw', 'Ничья'),
         ('Away Win', 'away_win', f"П2 ({best_match.get('away_team', '')})"),
     ]:
         prob = result_probs.get(res_key, 0)
-        val = calc_value(prob, odds.get(odds_key), min_prob=0.55)
-        if prob >= 0.55 and val > 0:
-            candidates.append((val, prob, label))
-
-    # 2. ТОТАЛ 2.5
+        real_odds = odds.get(odds_key)
+        if prob >= 0.55 and real_odds and real_odds > 1.0:
+            value_score = (prob * real_odds) - 1.0
+            if value_score > 0:
+                candidates.append({
+                    'value_score': value_score,
+                    'probability': prob,
+                    'label': label,
+                    'market_type': 'result'
+                })
+    
+    # === 2. ТОТАЛ 2.5 ===
     total_goals = best_match.get('total_goals', {}) or {}
     for res_key, odds_key, label in [
         ('Over 2.5', 'over_2_5', 'ТБ 2.5'),
         ('Under 2.5', 'under_2_5', 'ТМ 2.5'),
     ]:
         prob = total_goals.get(res_key, 0)
-        val = calc_value(prob, odds.get(odds_key), min_prob=0.50)
-        if prob >= 0.50 and val > 0:
-            candidates.append((val, prob, label))
-
+        real_odds = odds.get(odds_key)
+        if prob >= 0.50 and real_odds and real_odds > 1.0:
+            value_score = (prob * real_odds) - 1.0
+            if value_score > 0:
+                candidates.append({
+                    'value_score': value_score,
+                    'probability': prob,
+                    'label': label,
+                    'market_type': 'total'
+                })
+    
+    # === 3. ДОПОЛНИТЕЛЬНЫЕ РЫНКИ (угловые, карточки, удары) ===
+    additional_markets = best_match.get('additional_markets', [])
+    for market in additional_markets:
+        prob = market.get('probability', 0)
+        real_odds = market.get('bookmaker_odds')
+        if prob >= 0.60 and real_odds and real_odds > 1.0:
+            value_score = (prob * real_odds) - 1.0
+            if value_score > 0:
+                candidates.append({
+                    'value_score': value_score,
+                    'probability': prob,
+                    'label': market.get('label', ''),
+                    'market_type': 'additional'
+                })
+    
+    # === ВЫБОР ЛУЧШЕГО КАНДИДАТА ===
     if candidates:
-        candidates.sort(key=lambda x: (x[0], x[1]), reverse=True)
-        val, prob, label = candidates[0]
-        best_match['hot_bet'] = f"{label} ({round(prob * 100, 1)}%)"
-        best_match['hot_confidence'] = round(prob * 100, 1)
+        # Сортируем по value_score (убывание), затем по probability
+        candidates.sort(key=lambda x: (x['value_score'], x['probability']), reverse=True)
+        best = candidates[0]
+        
+        best_match['hot_bet'] = f"{best['label']} ({round(best['probability'] * 100, 1)}%)"
+        best_match['hot_confidence'] = round(best['probability'] * 100, 1)
         best_match['hot_bet_type'] = 'value'
+        best_match['hot_value_score'] = round(best['value_score'] * 100, 1)  # Для отладки
         return best_match
-
-    # 3. ЛУЧШИЙ ДОП. РЫНОК
-    if best_match.get('additional_markets'):
-        top = best_match['additional_markets'][0]
-        prob_pct = round(top['probability'] * 100, 1)
-        best_match['hot_bet'] = f"{top['label']} ({prob_pct}%)"
-        best_match['hot_confidence'] = prob_pct
-        best_match['hot_bet_type'] = 'market'
-        return best_match
-
-    # 4. ФАВОРИТ МОДЕЛИ (фолбэк)
+    
+    # === ФОЛБЭК: Если нет value, берём фаворита модели с высокой уверенностью ===
     if result_probs:
         fav_key, fav_prob = max(result_probs.items(), key=lambda kv: kv[1])
         fav_labels = {
@@ -692,7 +719,9 @@ def _set_hot_bet(best_match: dict) -> dict:
         best_match['hot_bet'] = f"{fav_labels.get(fav_key, fav_key)} ({round(fav_prob * 100, 1)}%)"
         best_match['hot_confidence'] = round(fav_prob * 100, 1)
         best_match['hot_bet_type'] = 'favorite'
-
+        best_match['hot_value_score'] = 0
+        return best_match
+    
     return best_match
 
 
@@ -868,7 +897,9 @@ def _process_league(league_key: str, model_info: dict, tier: str, min_conf: floa
     return candidates, debug
 
 def _collect_hot_predictions(limit: int = 5) -> List[dict]:
-    """Собирает ТОП-N hot-прогнозов из БУДУЩИХ матчей с кэфами."""
+    """
+    Собирает ТОП-N hot-прогнозов с упором на VALUE и высокую вероятность.
+    """
     candidates = []
     debug_stats = {}
     
@@ -879,19 +910,19 @@ def _collect_hot_predictions(limit: int = 5) -> List[dict]:
             'teams_not_found': 0,
             'prediction_errors': 0,
             'low_confidence': 0,
-            'no_value_no_markets': 0,
+            'low_gap': 0,  # 🆕 Низкий разрыв вероятностей
+            'no_value': 0,  # 🆕 Нет валуя
             'passed': 0,
         }
         
         if league_key not in MODELS:
             continue
-        model_info = MODELS[league_key]
         
+        model_info = MODELS[league_key]
         tier = LEAGUE_TIERS.get(league_key, 'C')
         if tier == 'C':
             continue
         
-        min_conf = HOT_MIN_CONFIDENCE.get(tier, 60)
         fixtures = get_fixtures(league_key)
         if not fixtures:
             continue
@@ -899,86 +930,77 @@ def _collect_hot_predictions(limit: int = 5) -> List[dict]:
         df = model_info.get('df')
         if df is None:
             continue
+        
         all_teams = list(set(df['home_team']) | set(df['away_team']))
         debug_stats[league_key]['total_fixtures'] = len(fixtures)
         
         for fixture in fixtures:
             try:
-                # Нормализуем имена через словарь алиасов
+                # Нормализуем имена
                 home_normalized = normalize_team_name(fixture['home_team'])
                 away_normalized = normalize_team_name(fixture['away_team'])
-                
                 home_team = find_similar_team(home_normalized, all_teams, threshold=0.60)
                 away_team = find_similar_team(away_normalized, all_teams, threshold=0.60)
                 
                 if not home_team or not away_team:
-                    if not home_team:
-                        print(f"   ⚠️ {league_key}: НЕ НАЙДЕНА '{fixture['home_team']}'", flush=True)
-                    if not away_team:
-                        print(f"   ⚠️ {league_key}: НЕ НАЙДЕНА '{fixture['away_team']}'", flush=True)
                     debug_stats[league_key]['teams_not_found'] += 1
                     continue
-
-
+                
                 if home_team == away_team:
-                    print(f"   ⚠️ {league_key}: КОМАНДЫ СОВПАЛИ! '{fixture['home_team']}' vs '{fixture['away_team']}' → оба = '{home_team}'", flush=True)
                     debug_stats[league_key]['teams_not_found'] += 1
                     continue
                 
                 debug_stats[league_key]['teams_found'] += 1
                 
+                # Получаем прогноз
                 prediction = predict_match(
                     team1=home_team, team2=away_team,
                     model_data=model_info['model_data'],
                     ratings_dict=model_info.get('ratings', {}),
                     all_matches_df=df,
                 )
+                
                 if 'error' in prediction or 'result' not in prediction:
                     debug_stats[league_key]['prediction_errors'] += 1
                     continue
                 
                 odds = fixture.get('odds', {}) or {}
                 result_probs = prediction.get('result', {})
-            
-            # 🛡️ ЗАЩИТА от битых/перепутанных кэфов:
-            # если букмекер и модель НЕ согласны, кто фаворит,
-            # и кэфы экстремальные — не доверяем value по исходам
-                bk_home_fav = (odds.get('home_win') or 99) < (odds.get('away_win') or 99)
-                md_home_fav = result_probs.get('Home Win', 0) > result_probs.get('Away Win', 0)
-                extreme = max(odds.get('home_win') or 0, odds.get('away_win') or 0) > 3.5
-                odds_suspicious = (bk_home_fav != md_home_fav) and extreme
-            
-                if odds_suspicious:
-                    print(f"   🛡️ {league_key}: подозрительные кэфы ({fixture['home_team']}: {odds.get('home_win')} / {odds.get('away_win')}) — value по исходам обнулён", flush=True)
-            
+                
+                # 🆕 ПРОВЕРКА 1: Разрыв вероятностей (gap check)
+                sorted_probs = sorted(result_probs.values(), reverse=True)
+                probability_gap = sorted_probs[0] - sorted_probs[1] if len(sorted_probs) > 1 else 0
+                
+                if probability_gap < MIN_PROBABILITY_GAP:
+                    debug_stats[league_key]['low_gap'] += 1
+                    continue
+                
+                # Проверяем уверенность модели
+                max_prob = max(result_probs.values())
+                if max_prob < HOT_MIN_CONFIDENCE / 100.0:
+                    debug_stats[league_key]['low_confidence'] += 1
+                    continue
+                
+                # Считаем value для всех рынков
                 value_home = calc_value(result_probs.get('Home Win', 0), odds.get('home_win'), min_prob=0.50)
                 value_draw = calc_value(result_probs.get('Draw', 0), odds.get('draw'), min_prob=0.30)
                 value_away = calc_value(result_probs.get('Away Win', 0), odds.get('away_win'), min_prob=0.50)
-            
-                # 🛡️ Если кэфы подозрительные — обнуляем value по исходам
-                if odds_suspicious:
-                    value_home = 0.0
-                    value_away = 0.0
                 
                 tg_probs = prediction.get('total_goals') or {}
                 value_over = calc_value(tg_probs.get('Over 2.5', 0), odds.get('over_2_5'), min_prob=0.50)
                 value_under = calc_value(tg_probs.get('Under 2.5', 0), odds.get('under_2_5'), min_prob=0.50)
                 
                 best_value = max(value_home, value_draw, value_away, value_over, value_under)
+                
+                # 🆕 ПРОВЕРКА 2: Есть ли валуй?
+                if best_value < MIN_VALUE_SCORE:
+                    debug_stats[league_key]['no_value'] += 1
+                    continue
+                
+                # Извлекаем доп. рынки
                 additional_markets = _extract_additional_markets(prediction, odds)
-                confidence = prediction.get('hot_confidence', 0)
                 
-                if confidence < min_conf:
-                    debug_stats[league_key]['low_confidence'] += 1
-                    continue
-                
-                if not (best_value > 0 or additional_markets):
-                    debug_stats[league_key]['no_value_no_markets'] += 1
-                    continue
-                
-                value_bonus = min(best_value, 0.30) * 100 if best_value > 0 else 0
-                score = confidence + value_bonus + len(additional_markets) * 5
-                
+                # Формируем кандидата
                 candidate = {
                     **prediction,
                     'league': league_key,
@@ -994,20 +1016,24 @@ def _collect_hot_predictions(limit: int = 5) -> List[dict]:
                     'best_value': best_value,
                     'additional_markets': additional_markets,
                     'is_hot': True,
-                    'score': round(score, 1),
+                    'score': round(max_prob * 100 + best_value * 100, 1),  # Скоринг: уверенность + валуй
                 }
+                
+                # Выбираем лучшую ставку через новую функцию
                 candidate = _set_hot_bet(candidate)
                 
-                # Пересчёт trust_signal на основе hot_confidence
+                # Пересчёт trust_signal
                 hc = candidate.get('hot_confidence', 0)
-                if hc >= 70:
-                    candidate['trust_signal'] = "💎 АЛМАЗНЫЙ | Максимальная уверенность"
+                vs = candidate.get('hot_value_score', 0)
+                
+                if hc >= 70 and vs >= 10:
+                    candidate['trust_signal'] = "💎 АЛМАЗНЫЙ | Высокая уверенность + жирный валуй"
+                elif hc >= 65 and vs >= 5:
+                    candidate['trust_signal'] = "🥇 ЗОЛОТОЙ | Отличный валуй"
                 elif hc >= 60:
-                    candidate['trust_signal'] = "🥇 ЗОЛОТОЙ | Высокая уверенность"
-                elif hc >= 55:
-                    candidate['trust_signal'] = "🥈 СЕРЕБРЯНЫЙ | Средняя уверенность"
+                    candidate['trust_signal'] = "🥈 СЕРЕБРЯНЫЙ | Хорошая уверенность"
                 else:
-                    candidate['trust_signal'] = "🥉 БРОНЗОВЫЙ | Низкая уверенность"
+                    candidate['trust_signal'] = "🥉 БРОНЗОВЫЙ | Стандартный прогноз"
                 
                 candidates.append(candidate)
                 debug_stats[league_key]['passed'] += 1
@@ -1016,36 +1042,29 @@ def _collect_hot_predictions(limit: int = 5) -> List[dict]:
                 debug_stats[league_key]['prediction_errors'] += 1
                 logger.warning(f"⚠️ Ошибка обработки матча: {e}")
                 continue
-
-
-    # 🆕 ОТЛАДКА: ВСЕ кандидаты до диверсификации
-    print("\n" + "="*60, flush=True)
-    print(f"🔍 ВСЕГО КАНДИДАТОВ ДО ДИВЕРСИФИКАЦИИ: {len(candidates)}", flush=True)
-    if candidates:
-        for i, c in enumerate(candidates[:10], 1):
-            print(f"   {i}. {c['league']} | {c['home_team']} vs {c['away_team']} | score={c['score']} | {c['hot_bet']}", flush=True)
-    print("="*60, flush=True)
+    
+    # Сортируем по score (убывание) и берём топ-N
+    candidates.sort(key=lambda x: x['score'], reverse=True)
     
     # Диагностика
     print("\n" + "="*60, flush=True)
-    print("🔍 ДИАГНОСТИКА HOT-ПРОГНОЗОВ ПО ЛИГАМ", flush=True)
+    print("🔍 ДИАГНОСТИКА HOT-ПРОГНОЗОВ (VALUE-FOCUS)", flush=True)
     print("="*60, flush=True)
     for league, stats in debug_stats.items():
         if stats['total_fixtures'] == 0:
             continue
         print(f"\n🏆 {league.upper()}:", flush=True)
-        print(f"   📊 Матчей в расписании: {stats['total_fixtures']}", flush=True)
-        print(f"   ✅ Команд найдено: {stats['teams_found']}", flush=True)
-        print(f"   ❌ Команд НЕ найдено: {stats['teams_not_found']}", flush=True)
-        print(f"   ⚠️ Ошибок прогноза: {stats['prediction_errors']}", flush=True)
+        print(f"   📊 Матчей: {stats['total_fixtures']}", flush=True)
+        print(f"   ✅ Найдено: {stats['teams_found']}", flush=True)
+        print(f"   ❌ Не найдено: {stats['teams_not_found']}", flush=True)
+        print(f"   ⚠️ Ошибок: {stats['prediction_errors']}", flush=True)
         print(f"   📉 Низкая уверенность: {stats['low_confidence']}", flush=True)
-        print(f"   🚫 Нет value/рынков: {stats['no_value_no_markets']}", flush=True)
-        print(f"   🎯 ПРОШЛО ФИЛЬТР: {stats['passed']}", flush=True)
+        print(f"   🔗 Низкий разрыв (gap): {stats['low_gap']}", flush=True)
+        print(f"    Нет валуя: {stats['no_value']}", flush=True)
+        print(f"    ПРОШЛО: {stats['passed']}", flush=True)
     print("="*60 + "\n", flush=True)
     
-    candidates = _diversify_by_league(candidates, limit=limit, penalty=15)
     return candidates[:limit]
-
 
 # ==================== ENDPOINTS: HOT ====================
 
