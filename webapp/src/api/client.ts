@@ -174,6 +174,13 @@ export interface UserSubscription {
   trial_used: boolean;
   is_active: boolean;
   created_at: string;
+  // 🆕 Дополнительные поля из get_subscription_info()
+  days_left?: number;
+  trial_available?: boolean;
+  is_promo_available?: boolean;
+  is_winback_eligible?: boolean;
+  last_paid_end_date?: string;
+  promo_first_month_used?: number;
 }
 
 // 🆕 ИНТЕРФЕЙС: Ответ от ЮKassa при создании платежа

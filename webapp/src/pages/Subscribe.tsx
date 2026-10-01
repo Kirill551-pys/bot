@@ -9,7 +9,7 @@ export function Subscribe() {
   const { showPopup, hapticFeedback } = useTelegram();
   const queryClient = useQueryClient();
   
-  // 🆕 Состояние для чекбоксов согласия (отдельно для каждого тарифа)
+  //  Состояние для чекбоксов согласия (отдельно для каждого тарифа)
   const [agreedTariffs, setAgreedTariffs] = useState<Record<string, boolean>>({});
 
   const { data: subscription } = useQuery<UserSubscription>({
@@ -25,11 +25,11 @@ export function Subscribe() {
       queryClient.invalidateQueries({ queryKey: ['subscription'] });
     },
     onError: (error: any) => {
-      showPopup('❌ ' + (error.response?.data?.detail || 'Ошибка'));
+      showPopup(' ' + (error.response?.data?.detail || 'Ошибка'));
     }
   });
 
-  // 🆕 Мутация для создания платежа через ЮKassa
+  //  Мутация для создания платежа через ЮKassa
   const paymentMutation = useMutation({
     mutationFn: ({ tariff, amount }: { tariff: string; amount: number }) => 
       api.createPayment(tariff, amount),
@@ -47,9 +47,12 @@ export function Subscribe() {
     onError: (error: any) => {
       hapticFeedback('error');
       const errorMsg = error.response?.data?.detail || 'Не удалось создать платёж. Попробуйте позже.';
-      showPopup(' ' + errorMsg);
+      showPopup('❌ ' + errorMsg);
     }
   });
+
+  // 🆕 Получаем флаг доступности промо из данных подписки
+  const isPromoAvailable = subscription?.is_promo_available ?? true;
 
   // 🆕 Тарифы с ключами, совпадающими с config.py
   const tariffs = [
@@ -61,7 +64,8 @@ export function Subscribe() {
       icon: '🎁', 
       popular: true, 
       perDay: 17,
-      description: 'Специальная цена для новых пользователей'
+      description: 'Специальная цена для новых пользователей',
+      hidden: !isPromoAvailable  // 🆕 Скрываем, если промо уже использовано
     },
     { 
       key: 'regular_month', 
@@ -71,17 +75,19 @@ export function Subscribe() {
       icon: '📆', 
       popular: false, 
       perDay: 50,
-      description: 'Полный доступ на 30 дней'
+      description: 'Полный доступ на 30 дней',
+      hidden: false
     },
     { 
       key: 'quarter', 
       name: 'Квартал', 
       price: 3990, 
       days: 90, 
-      icon: '️', 
+      icon: '🗓️', 
       popular: false, 
       perDay: 44,
-      description: 'Выгода 11% по сравнению с месячным'
+      description: 'Выгода 11% по сравнению с месячным',
+      hidden: false
     },
   ];
 
@@ -110,7 +116,7 @@ export function Subscribe() {
 
   return (
     <div className="p-4 space-y-5 max-w-lg mx-auto pb-28">
-      <h1 className="text-[22px] font-extrabold text-white animate-fade-up">💎 Подписка</h1>
+      <h1 className="text-[22px] font-extrabold text-white animate-fade-up"> Подписка</h1>
       
       {/* ===== Статус ===== */}
       <div className="card animate-fade-up delay-1 relative overflow-hidden">
@@ -147,8 +153,8 @@ export function Subscribe() {
         </div>
       </div>
 
-      {/* ===== Пробный период ===== */}
-      {subscription?.subscription_type === 'free' && !subscription?.is_active && (
+      {/*  Пробный период — показываем ТОЛЬКО если trial не использован */}
+      {subscription?.subscription_type === 'free' && !subscription?.is_active && !subscription?.trial_used && (
         <button
           onClick={() => trialMutation.mutate()}
           disabled={trialMutation.isPending}
@@ -165,127 +171,144 @@ export function Subscribe() {
         </button>
       )}
 
+      {/* 🆕 Если trial уже использован — показываем информационное сообщение */}
+      {subscription?.subscription_type === 'free' && subscription?.trial_used && (
+        <div className="card animate-fade-up delay-2 border border-white/10 bg-white/5">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🎁</span>
+            <div>
+              <p className="text-white font-bold text-[14px]">Пробный период уже использован</p>
+              <p className="text-[12px] text-[#8b9baa] mt-0.5">
+                Выберите платный тариф ниже для полного доступа
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ===== Тарифы ===== */}
       <div className="space-y-3 animate-fade-up delay-3">
-        <h2 className="font-extrabold text-[16px] text-white px-1"> Тарифы</h2>
-        {tariffs.map((tariff, idx) => {
-          // 🆕 Проверяем, стоит ли галочка для этого тарифа
-          const isAgreed = agreedTariffs[tariff.key] || false;
-          const isLoading = paymentMutation.isPending;
-          
-          return (
-            <div
-              key={tariff.key}
-              className={`tariff-card animate-fade-up`}
-              style={{ animationDelay: `${0.1 + idx * 0.05}s`, opacity: 0 }}
-            >
-              {tariff.popular && (
-                <div className="absolute top-0 right-5 -translate-y-1/2">
-                  <span className="badge badge-blue bg-blue-500 text-white shadow-lg shadow-blue-500/30 px-3 py-1">
-                    ⭐ ПОПУЛЯРНЫЙ
-                  </span>
-                </div>
-              )}
-              <div className="flex justify-between items-start mb-3">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">{tariff.icon}</span>
-                  <div>
-                    <p className="font-extrabold text-white text-[16px]">{tariff.name}</p>
-                    <p className="text-[12px] text-[#8b9baa]">{tariff.days} дней доступа</p>
-                    {tariff.description && (
-                      <p className="text-[11px] text-[#8b9baa] mt-0.5">{tariff.description}</p>
-                    )}
+        <h2 className="font-extrabold text-[16px] text-white px-1">📋 Тарифы</h2>
+        {tariffs
+          .filter(t => !t.hidden)  // 🆕 Фильтруем скрытые тарифы (например, использованный промо)
+          .map((tariff, idx) => {
+            // 🆕 Проверяем, стоит ли галочка для этого тарифа
+            const isAgreed = agreedTariffs[tariff.key] || false;
+            const isLoading = paymentMutation.isPending;
+            
+            return (
+              <div
+                key={tariff.key}
+                className={`tariff-card animate-fade-up`}
+                style={{ animationDelay: `${0.1 + idx * 0.05}s`, opacity: 0 }}
+              >
+                {tariff.popular && (
+                  <div className="absolute top-0 right-5 -translate-y-1/2">
+                    <span className="badge badge-blue bg-blue-500 text-white shadow-lg shadow-blue-500/30 px-3 py-1">
+                      ⭐ ПОПУЛЯРНЫЙ
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between items-start mb-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">{tariff.icon}</span>
+                    <div>
+                      <p className="font-extrabold text-white text-[16px]">{tariff.name}</p>
+                      <p className="text-[12px] text-[#8b9baa]">{tariff.days} дней доступа</p>
+                      {tariff.description && (
+                        <p className="text-[11px] text-[#8b9baa] mt-0.5">{tariff.description}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[22px] font-extrabold text-white">{tariff.price}₽</p>
+                    <p className="text-[11px] text-[#8b9baa]">≈{tariff.perDay}₽/день</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-[22px] font-extrabold text-white">{tariff.price}₽</p>
-                  <p className="text-[11px] text-[#8b9baa]">≈{tariff.perDay}₽/день</p>
-                </div>
-              </div>
-              
-              {/* 🆕 Чекбокс согласия */}
-              <label className="flex items-start gap-2 mt-4 cursor-pointer group">
-                <div className="relative mt-0.5">
-                  <input 
-                    type="checkbox" 
-                    checked={isAgreed}
-                    onChange={() => toggleAgreement(tariff.key)}
-                    className="w-4 h-4 accent-blue-500 cursor-pointer"
-                  />
-                </div>
-                <span className="text-[11px] text-[#8b9baa] leading-snug group-hover:text-[#a0b0c0] transition-colors">
-                  Я понимаю, что подписка будет автоматически продлеваться, 
-                  пока я не отключу автопродление. Отключить можно в один клик. 
-                  Согласие фиксируется с датой и временем.{' '}
+                
+                {/*  Чекбокс согласия */}
+                <label className="flex items-start gap-2 mt-4 cursor-pointer group">
+                  <div className="relative mt-0.5">
+                    <input 
+                      type="checkbox" 
+                      checked={isAgreed}
+                      onChange={() => toggleAgreement(tariff.key)}
+                      className="w-4 h-4 accent-blue-500 cursor-pointer"
+                    />
+                  </div>
+                  <span className="text-[11px] text-[#8b9baa] leading-snug group-hover:text-[#a0b0c0] transition-colors">
+                    Я понимаю, что подписка будет автоматически продлеваться, 
+                    пока я не отключу автопродление. Отключить можно в один клик. 
+                    Согласие фиксируется с датой и временем.{' '}
+                    <a 
+                      href={LEGAL.offer} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-400 underline hover:text-blue-300"
+                    >
+                      Условия оферты
+                    </a>
+                    {' '}и{' '}
+                    <a 
+                      href={LEGAL.privacy} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-400 underline hover:text-blue-300"
+                    >
+                      политика ПДн
+                    </a>
+                  </span>
+                </label>
+                
+                {/* 🆕 Кнопка с блокировкой */}
+                <button
+                  onClick={() => handlePayment(tariff.key, tariff.price)}
+                  disabled={!isAgreed || isLoading}
+                  className={`w-full py-3 rounded-xl font-bold text-[14px] transition-all active:scale-[.96] mt-3 ${
+                    !isAgreed 
+                      ? 'bg-white/5 text-[#8b9baa] cursor-not-allowed border border-white/5'
+                      : isLoading
+                      ? 'bg-white/5 text-[#8b9baa] cursor-wait border border-white/5'
+                      : tariff.popular
+                      ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40'
+                      : 'bg-white/5 text-white border border-white/10 hover:bg-white/10'
+                  }`}
+                >
+                  {isLoading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Создаём платёж...
+                    </span>
+                  ) : !isAgreed ? (
+                    <>🔒 Подтвердите согласие для оплаты</>
+                  ) : (
+                    <>💳 Оплатить {tariff.price}₽</>
+                  )}
+                </button>
+                
+                <p className="text-[10px] text-[#8b9baa] leading-relaxed mt-3 text-center">
+                  Нажимая «Оплатить», вы принимаете{' '}
                   <a 
                     href={LEGAL.offer} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="text-blue-400 underline hover:text-blue-300"
+                    className="text-blue-400 underline"
                   >
-                    Условия оферты
-                  </a>
-                  {' '}и{' '}
+                    условия оферты
+                  </a>{' '}
+                  и{' '}
                   <a 
                     href={LEGAL.privacy} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="text-blue-400 underline hover:text-blue-300"
+                    className="text-blue-400 underline"
                   >
-                    политика ПДн
-                  </a>
-                </span>
-              </label>
-              
-              {/* 🆕 Кнопка с блокировкой */}
-              <button
-                onClick={() => handlePayment(tariff.key, tariff.price)}
-                disabled={!isAgreed || isLoading}
-                className={`w-full py-3 rounded-xl font-bold text-[14px] transition-all active:scale-[.96] mt-3 ${
-                  !isAgreed 
-                    ? 'bg-white/5 text-[#8b9baa] cursor-not-allowed border border-white/5'
-                    : isLoading
-                    ? 'bg-white/5 text-[#8b9baa] cursor-wait border border-white/5'
-                    : tariff.popular
-                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40'
-                    : 'bg-white/5 text-white border border-white/10 hover:bg-white/10'
-                }`}
-              >
-                {isLoading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Создаём платёж...
-                  </span>
-                ) : !isAgreed ? (
-                  <>🔒 Подтвердите согласие для оплаты</>
-                ) : (
-                  <>💳 Оплатить {tariff.price}₽</>
-                )}
-              </button>
-              
-              <p className="text-[10px] text-[#8b9baa] leading-relaxed mt-3 text-center">
-                Нажимая «Оплатить», вы принимаете{' '}
-                <a 
-                  href={LEGAL.offer} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-blue-400 underline"
-                >
-                  условия оферты
-                </a>{' '}
-                и{' '}
-                <a 
-                  href={LEGAL.privacy} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-blue-400 underline"
-                >
-                  политику ПДн
-                </a>.
-              </p>
-            </div>
-          );
-        })}
+                    политику ПДн
+                  </a>.
+                </p>
+              </div>
+            );
+          })}
       </div>
 
       {/* ===== Преимущества ===== */}
