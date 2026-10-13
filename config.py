@@ -181,34 +181,34 @@ FIXTURES_CACHE_TTL = int(os.getenv("FIXTURES_CACHE_TTL", str(6 * 3600)))
 
 # Маппинг наших лиг на sport_key из The Odds API
 ODDS_LEAGUES_MAP = {
-    "epl":              "soccer_epl",
-    "laLiga":           "soccer_spain_la_liga",
-    "bundesliga":       "soccer_germany_bundesliga",
-    "seriaA":           "soccer_italy_serie_a",
-    "ligue1":           "soccer_france_ligue_one",
+    # "epl":              "soccer_epl",
+    # "laLiga":           "soccer_spain_la_liga",
+    # "bundesliga":       "soccer_germany_bundesliga",
+    # "seriaA":           "soccer_italy_serie_a",
+    # "ligue1":           "soccer_france_ligue_one",
     "champions_league": "soccer_uefa_champs_league",
-    "eredivisise":      "soccer_netherlands_eredivisie",
-    "portugueseLiga":   "soccer_portugal_primeira_liga",
-    "turkey":           "soccer_turkey_super_league",
-    "rpl":              "soccer_russia_premier_league",
+    # "eredivisise":      "soccer_netherlands_eredivisie",
+    # "portugueseLiga":   "soccer_portugal_primeira_liga",
+    # "turkey":           "soccer_turkey_super_league",
+    # "rpl":              "soccer_russia_premier_league",
     # "scotland":         "soccer_scotland_premiership",
-    "greece":           "soccer_greece_super_league",
-    "poland":           "soccer_poland_ekstraklasa",
-    "argentina":        "soccer_argentina_primera_division",
+    # "greece":           "soccer_greece_super_league",
+    # "poland":           "soccer_poland_ekstraklasa",
+    # "argentina":        "soccer_argentina_primera_division",
     # "brazil":           "soccer_brazil_serie_a",
-    "usa":              "soccer_usa_mls",
+    # "usa":              "soccer_usa_mls",
     # "mexico":           "soccer_mexico_liga_mx",
-    "japan":            "soccer_japan_j_league",
-    "china":            "soccer_china_superleague",
-    "norway":           "soccer_norway_eliteserien",
-    "finland":          "soccer_finland_veikkausliiga",
-    "dania":            "soccer_denmark_superliga",
-    "austria":          "soccer_austria_bundesliga",
+    # "japan":            "soccer_japan_j_league",
+    # "china":            "soccer_china_superleague",
+    # "norway":           "soccer_norway_eliteserien",
+    # "finland":          "soccer_finland_veikkausliiga",
+    # "dania":            "soccer_denmark_superliga",
+    # "austria":          "soccer_austria_bundesliga",
     # "romania":          "soccer_romania_liga_1",
 }
 
 # Лиги, для которых запрашиваем коэффициенты (для экономии кредитов)
 # Чем меньше лиг — тем меньше кредитов тратится
 ODDS_ACTIVE_LEAGUES = [
-    "epl", "laLiga", "bundesliga", "seriaA", "ligue1","portugueseLiga", "turkey", "champions_league", "eredivisise", "greece"
+    "champions_league"
 ]
