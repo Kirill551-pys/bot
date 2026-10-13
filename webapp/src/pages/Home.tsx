@@ -181,6 +181,16 @@ export function Home() {
               >
                 Смотреть разбор матча →
               </Link>
+
+              {/* 🔥 НОВАЯ МЕТКА: Историческая точность */}
+              {hot.historical_accuracy && hot.historical_accuracy > 0 && (
+                <div className="mt-3 px-3 py-2 bg-blue-500/10 border border-blue-500/30 rounded-xl inline-flex items-center gap-2">
+                  <span className="text-xs text-blue-400 font-medium">
+                    🎯 Историческая точность: {hot.historical_accuracy}%
+                  </span>
+                </div>
+              )}
+
               {/* 🆕 КНОПКА: следующий hot-прогноз */}
               {hasMore && (
                 <button

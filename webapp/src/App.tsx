@@ -11,6 +11,7 @@ import { Stats } from './pages/Stats';
 import { Subscribe } from './pages/Subscribe';
 import './styles/globals.css';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { ModelMetrics } from './components/ModelMetrics';
 
 
 /* ============================================
@@ -142,6 +143,7 @@ function App() {
                 </ProtectedRoute>
               } />
               <Route path="/subscribe" element={<Subscribe />} />
+              <Route path="/metrics" element={<ModelMetrics />} /> 
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
             <BottomNav />
@@ -162,6 +164,7 @@ function BottomNav() {
     { path: '/', icon: '🔥', label: 'Главная' },
     { path: '/prediction', icon: '⚽', label: 'Прогноз' },
     { path: '/stats', icon: '📊', label: 'Стата' },
+    { path: '/metrics', icon: '📈', label: 'Метрики' },
     { path: '/subscribe', icon: '💎', label: 'VIP' },
   ];
 

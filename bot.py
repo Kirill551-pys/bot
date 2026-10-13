@@ -11,11 +11,13 @@ import asyncio
 
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters.command import Command
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.client.session.aiohttp import AiohttpSession
 
 # Импортируем только то, что точно есть в config.py
 from config import BOT_TOKEN, ADMIN_ID
+
+from database import get_user_legal_status, accept_legal_agreement
 
 # ==================== НАСТРОЙКА ЛОГИРОВАНИЯ ====================
 logging.basicConfig(
@@ -24,6 +26,18 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 logger = logging.getLogger(__name__)
+
+# ==================== КОНСТАНТЫ ====================
+LEGAL_GATE_TEXT = (
+    "🔞 <b>Подтверждение возраста и условий</b>\n\n"
+    "Сервис «Тактика Ставок» предоставляет исключительно математическую и статистическую аналитику.\n\n"
+    "⚠️ <b>ВАЖНО:</b>\n"
+    "1. Сервис предназначен только для лиц <b>старше 18 лет</b>.\n"
+    "2. Мы <b>не являемся букмекером</b> и не принимаем ставки.\n"
+    "3. Прогнозы не гарантируют выигрыш. Ставки связаны с риском потери средств.\n\n"
+    "Нажимая кнопку ниже, вы подтверждаете свой возраст и соглашаетесь с "
+    "<a href='https://telegra.ph/Oferta-Taktika-Stavok-09-01'>Публичной офертой</a>."
+)
 
 # ==================== ИНИЦИАЛИЗАЦИЯ ====================
 # 🔥 Настройка прокси для обхода блокировок Telegram (Xray на порту 10808)
@@ -54,22 +68,78 @@ def get_main_menu() -> ReplyKeyboardMarkup:
 
 # ==================== ОБРАБОТЧИКИ КОМАНД ====================
 
+# ==================== ОБРАБОТЧИКИ КОМАНД ====================
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
-    """Обработчик команды /start"""
-    logger.info(f"✅ Команда /start от пользователя {message.from_user.id}")
-    await message.answer(
-        "⚽ <b>Добро пожаловать в Тактику Ставок!</b>\n\n"
-        "📱 <b>Весь функционал доступен в нашем приложении:</b>\n"
-        "🔥 Горячие разборы матчей\n"
-        "📊 Расширенная статистика по 20+ лигам\n"
-        "🎯 Разбор матчей на угловые, карточки, удары и фолы\n"
-        "💎 Удобное управление подпиской\n\n"
-        "Нажмите кнопку ниже, чтобы начать 👇",
-        reply_markup=get_main_menu(),
+    user_id = message.from_user.id
+    logger.info(f"✅ Команда /start от пользователя {user_id}")
+    
+    # 🔥 ШАГ 1: Проверяем, принял ли пользователь оферту
+    is_accepted = get_user_legal_status(user_id)
+    
+    if not is_accepted:
+        # 🔥 ШАГ 2: Если НЕ принял — показываем Age Gate
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="✅ Мне есть 18 лет, я принимаю условия", callback_data="legal_accept")],
+            [InlineKeyboardButton(text="❌ Мне нет 18 лет", callback_data="legal_decline")]
+        ])
+        
+        await message.answer(
+            LEGAL_GATE_TEXT,
+            reply_markup=keyboard,
+            parse_mode="HTML",
+            disable_web_page_preview=True # Чтобы ссылка на оферту не превращалась в огромاю картинку
+        )
+    else:
+        # 🔥 ШАГ 3: Если УЖЕ принял — показываем твое стандартное приветствие
+        await message.answer(
+            "⚽ <b>Добро пожаловать в Тактику Ставок!</b>\n\n"
+            "📱 <b>Весь функционал доступен в нашем приложении:</b>\n"
+            "🔥 Горячие разборы матчей\n"
+            "📊 Расширенная статистика по 20+ лигам\n"
+            "🎯 Разбор матчей на угловые, карточки, удары и фолы\n"
+            "💎 Удобное управление подпиской\n\n"
+            "Нажмите кнопку ниже, чтобы начать 👇",
+            reply_markup=get_main_menu(),
+            parse_mode="HTML"
+        )
+
+# 🔥 НОВЫЕ ХЕНДЛЕРЫ: Обработка Age Gate
+@dp.callback_query(F.data == "legal_accept")
+async def process_legal_accept(callback: types.CallbackQuery):
+    user_id = callback.from_user.id
+    
+    # 1. Записываем факт согласия в БД
+    accept_legal_agreement(user_id)
+    logger.info(f"✅ Юзер {user_id} принял оферту и подтвердил 18+")
+    
+    # 2. Меняем сообщение с кнопками на сообщение об успехе
+    await callback.message.edit_text(
+        "✅ <b>Доступ открыт!</b>\n\n"
+        "Спасибо за подтверждение. Помните: аналитика — это инструмент, "
+        "а дисциплина и банк-менеджмент — залог успеха. Играйте ответственно!\n\n"
+        "⚠️ <i>Прогнозы не являются гарантией дохода.</i>",
         parse_mode="HTML"
     )
+    
+    # 3. Отправляем главное меню с кнопкой Web App (так как edit_text убирает старую клавиатуру)
+    await callback.message.answer(
+        "🚀 Откройте приложение:",
+        reply_markup=get_main_menu()
+    )
+    
+    # 4. Убираем "часики" загрузки на кнопке в Telegram
+    await callback.answer()
 
+@dp.callback_query(F.data == "legal_decline")
+async def process_legal_decline(callback: types.CallbackQuery):
+    # Меняем сообщение на отказ
+    await callback.message.edit_text(
+        "❌ <b>Доступ ограничен.</b>\n\n"
+        "К сожалению, использование сервиса разрешено только совершеннолетним. "
+        "Если вам уже есть 18 лет, отправьте команду /start повторно."
+    )
+    await callback.answer()
 
 @dp.message(Command("help"))
 @dp.message(F.text == "❓ Помощь")

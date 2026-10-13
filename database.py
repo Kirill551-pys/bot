@@ -51,6 +51,7 @@ def init_db():
                     created_at TEXT DEFAULT (datetime('now'))
                 );
                 
+                
                 CREATE TABLE IF NOT EXISTS payments (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     user_id INTEGER NOT NULL,
@@ -72,12 +73,52 @@ def init_db():
                     FOREIGN KEY (referrer_id) REFERENCES subscribers(user_id) ON DELETE CASCADE,
                     FOREIGN KEY (referred_id) REFERENCES subscribers(user_id) ON DELETE CASCADE
                 );
+
+                CREATE TABLE IF NOT EXISTS prediction_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    match_id TEXT NOT NULL,
+                    market_type TEXT NOT NULL,          -- Например: '1X2_Home', 'Total_Over_2.5'
+                    model_probability REAL NOT NULL,    -- Вероятность по твоей модели (0.0 - 1.0)
+                    market_odds REAL NOT NULL,          -- Коэффициент букмекера на момент прогноза
+                    stake REAL DEFAULT 1.0,             -- Условная ставка (например, 1 единица)
+                    is_hit INTEGER DEFAULT NULL,        -- 1 = зашло, 0 = не зашло, NULL = матч еще не сыгран
+                    predicted_at TEXT DEFAULT (datetime('now')),
+                    resolved_at TEXT                    -- Дата, когда матч завершился и мы обновили is_hit
+                );
             ''')
+            # 🔥 НОВАЯ ТАБЛИЦА: Хранение прогнозов для статистики
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS predictions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    league TEXT NOT NULL,
+                    team1 TEXT NOT NULL,
+                    team2 TEXT NOT NULL,
+                    commence_time TEXT NOT NULL,
+                    hot_bet TEXT NOT NULL,
+                    hot_bet_type TEXT,
+                    confidence REAL,
+                    is_hit INTEGER DEFAULT NULL,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES subscribers(user_id)
+                )
+            ''')
+            # Индекс для быстрого поиска незавершённых прогнозов
+            conn.execute('''
+                CREATE INDEX IF NOT EXISTS idx_predictions_pending 
+                ON predictions(is_hit, commence_time)
+            ''')
+        
+            conn.commit()
+            logger.info("✅ База данных инициализирована (включая таблицу predictions)")
             
             cursor = conn.cursor()
             new_columns = {
                 'last_paid_end_date': 'TEXT',
-                'promo_first_month_used': 'INTEGER DEFAULT 0'
+                'promo_first_month_used': 'INTEGER DEFAULT 0',
+                'is_legal_accepted': 'INTEGER DEFAULT 0',
+                'legal_accepted_at': 'TEXT'
             }
             for col_name, col_type in new_columns.items():
                 try:
@@ -91,11 +132,87 @@ def init_db():
     logger.info("✅ База данных инициализирована")
 
 
+def save_prediction_to_history(match_id: str, market_type: str, model_prob: float, odds: float, stake: float = 1.0):
+    """
+    Сохраняет прогноз в историю ДО начала матча.
+    is_hit по умолчанию NULL (матч еще не сыгран).
+    """
+    with _get_connection() as conn:
+        conn.execute("""
+            INSERT INTO prediction_history 
+            (match_id, market_type, model_probability, market_odds, stake, is_hit)
+            VALUES (?, ?, ?, ?, ?, NULL)
+        """, (match_id, market_type, model_prob, odds, stake))
+        conn.commit()
+
+def resolve_prediction(match_id: str, market_type: str, is_hit: int):
+    """
+    Обновляет статус прогноза ПОСЛЕ окончания матча.
+    is_hit: 1 = ставка зашла, 0 = ставка не зашла.
+    """
+    from datetime import datetime
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with _get_connection() as conn:
+        conn.execute("""
+            UPDATE prediction_history 
+            SET is_hit = ?, resolved_at = ? 
+            WHERE match_id = ? AND market_type = ?
+        """, (is_hit, now, match_id, market_type))
+        conn.commit()
+
+# И функции для Age Gate (на всякий случай, если ты их еще не добавил):
+def get_user_legal_status(user_id: int) -> bool:
+    """Проверяет, принял ли пользователь оферту и подтвердил 18+"""
+    with _get_connection() as conn:
+        cursor = conn.execute(
+            "SELECT is_legal_accepted FROM subscribers WHERE user_id = ?", 
+            (user_id,)
+        )
+        row = cursor.fetchone()
+        return bool(row and row[0] == 1)
+
+def accept_legal_agreement(user_id: int):
+    """Записывает в БД факт согласия пользователя"""
+    from datetime import datetime
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with _get_connection() as conn:
+        conn.execute(
+            "UPDATE subscribers SET is_legal_accepted = 1, legal_accepted_at = ? WHERE user_id = ?",
+            (now, user_id)
+        )
+        conn.commit()
+
+
 def get_all_users_count() -> int:
     """Общее количество пользователей в базе"""
     with _get_connection() as conn:
         row = conn.execute('SELECT COUNT(*) FROM subscribers').fetchone()
         return row[0] if row else 0
+
+def save_prediction(
+    user_id: int,
+    league: str,
+    team1: str,
+    team2: str,
+    commence_time: str,
+    hot_bet: str,
+    hot_bet_type: str = None,
+    confidence: float = None
+) -> int:
+    """
+    Сохраняет прогноз в БД для последующей проверки результата.
+    Возвращает ID сохранённой записи.
+    """
+    with _get_connection() as conn:
+        cursor = conn.execute('''
+            INSERT INTO predictions 
+            (user_id, league, team1, team2, commence_time, hot_bet, hot_bet_type, confidence)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (user_id, league, team1, team2, commence_time, hot_bet, hot_bet_type, confidence))
+        conn.commit()
+        prediction_id = cursor.lastrowid
+        logger.info(f"💾 Прогноз сохранён: ID={prediction_id}, {team1} vs {team2}, {hot_bet}")
+        return prediction_id
 
 
 def get_active_subscriptions_count() -> int:
@@ -493,14 +610,15 @@ def get_subscription_info(user_id: int) -> dict:
 def get_expiring_users(hours: int = 24) -> List[int]:
     """Возвращает список user_id, у которых подписка заканчивается в ближайшие N часов"""
     with _get_connection() as conn:
-        rows = conn.execute('''
+        # 🔥 ИСПРАВЛЕНИЕ: Используем f-строку для hours (это безопасно, т.к. hours — целое число)
+        # SQLite не умеет подставлять параметры внутрь строковых функций datetime()
+        rows = conn.execute(f'''
             SELECT user_id FROM subscribers
             WHERE is_active = 1
             AND subscription_end IS NOT NULL
-            AND subscription_end BETWEEN datetime('now') AND datetime('now', '+? hours')
-        ''', (hours,)).fetchall()
+            AND subscription_end BETWEEN datetime('now') AND datetime('now', '+{int(hours)} hours')
+        ''').fetchall()
         return [row[0] for row in rows]
-
 
 def get_winback_users() -> List[int]:
     """Возвращает список user_id для win-back уведомлений"""

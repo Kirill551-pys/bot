@@ -145,6 +145,7 @@ export interface TeamStats {
 // 🆕 ОБНОВЛЁН: наследует все поля Prediction (включая odds, value, additional_markets)
 export interface HotPrediction extends Prediction {
   // Поле `confidence` убрано, т.к. у нас есть `hot_confidence` из Prediction
+  historical_accuracy?: number;
 }
 
 // 🆕 НОВЫЙ ИНТЕРФЕЙС: будущий матч из The Odds API

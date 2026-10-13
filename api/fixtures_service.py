@@ -8,9 +8,11 @@
 import httpx
 import logging
 import time
-from datetime import datetime, timedelta, timezone  # 🔥 ДОБАВИТЬ ЭТО
-
+from datetime import datetime, timedelta, timezone  
 from typing import Dict, List, Optional
+
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception, RetryCallState
+
 from config import ODDS_API_KEY, FIXTURES_CACHE_TTL, ODDS_LEAGUES_MAP
 
 logger = logging.getLogger(__name__)
@@ -22,29 +24,46 @@ _cache: Dict[str, dict] = {}
 _api_calls_count = 0
 
 
+# Кэш в памяти: {league_key: {"data": [...], "ts": timestamp}}
+_cache: Dict[str, dict] = {}
+
+# Счётчик API вызовов (для мониторинга)
+_api_calls_count = 0
+
+def _should_retry_httpx_error(retry_state: RetryCallState) -> bool:
+    """
+    Определяет, стоит ли повторять запрос при ошибке httpx.
+    Мы повторяем ТОЛЬКО при таймаутах или ошибках сервера (5xx).
+    Ошибки 4xx (401, 404, 429) НЕ повторяем, чтобы не тратить попытки впустую.
+    """
+    exc = retry_state.outcome.exception()
+    
+    # 1. Повторяем при таймауте
+    if isinstance(exc, httpx.TimeoutException):
+        return True
+        
+    # 2. Повторяем при ошибках сервера (500, 502, 503, 504)
+    if isinstance(exc, httpx.HTTPStatusError):
+        return exc.response.status_code >= 500
+        
+    # Во всех остальных случаях (включая 4xx) не повторяем
+    return False
+
+@retry(
+    stop=stop_after_attempt(3),  # Максимум 3 попытки
+    wait=wait_exponential(multiplier=1, min=2, max=10),  # Задержка: 2с → 4с → 8с (макс 10с)
+    retry=retry_if_exception(_should_retry_httpx_error),  # Умный фильтр ошибок
+    reraise=True,  # После 3 неудач пробрасываем ошибку дальше
+    before_sleep=lambda retry_state: logger.warning(
+        f"⚠️ Сбой The Odds API (попытка {retry_state.attempt_number}/3). "
+        f"Повтор через {retry_state.next_action.sleep:.1f}с... "
+        f"Причина: {retry_state.outcome.exception()}"
+    )
+)
 def get_fixtures(league_key: str, force_refresh: bool = False) -> List[dict]:
     """
     Получить расписание будущих матчей с коэффициентами для лиги.
     Использует кэш, чтобы не тратить кредиты API.
-    
-    Возвращает список матчей:
-    [
-        {
-            "id": "...",
-            "home_team": "Arsenal",
-            "away_team": "Chelsea",
-            "commence_time": "2025-08-15T15:00:00Z",
-            "league_key": "epl",
-            "odds": {
-                "home_win": 2.10,
-                "draw": 3.40,
-                "away_win": 3.50,
-                "over_2_5": 1.90,
-                "under_2_5": 1.90
-            }
-        },
-        ...
-    ]
     """
     global _api_calls_count
 
@@ -80,12 +99,11 @@ def get_fixtures(league_key: str, force_refresh: bool = False) -> List[dict]:
         response = httpx.get(url, params=params, timeout=15)
         _api_calls_count += 1
 
-        # Логируем остаток кредитов (API возвращает в заголовке)
+        # Логируем остаток кредитов
         remaining = response.headers.get("x-requests-remaining", "?")
-        masked_key = ODDS_API_KEY[:6] + "***" + ODDS_API_KEY[-4:] if len(ODDS_API_KEY) > 10 else "***"
         logger.info(f"📡 API запрос #{_api_calls_count} | Осталось кредитов: {remaining}")
 
-        # Обработка ошибок
+        # 🔥 ОБРАБОТКА ОШИБОК 4xx (ИХ НЕ НАДО РЕТРАИТЬ)
         if response.status_code == 401:
             logger.error("❌ Неверный API ключ. Проверь ODDS_API_KEY в .env")
             return []
@@ -95,18 +113,18 @@ def get_fixtures(league_key: str, force_refresh: bool = False) -> List[dict]:
         elif response.status_code == 404:
             logger.warning(f"⚠️ Спорт '{sport_key}' не найден в The Odds API")
             return []
-        elif response.status_code != 200:
-            logger.error(f"❌ Ошибка API: {response.status_code} — {response.text[:200]}")
-            return []
+            
+        # 🔥 КРИТИЧЕСКИЙ МОМЕНТ: Если код 5xx (500, 502, 503, 504), 
+        # мы заставляем httpx выбросить исключение. 
+        # Декоратор @retry перехватит его и сделает повторную попытку!
+        response.raise_for_status()
 
         events = response.json()
 
         # 5. Обрабатываем каждый матч с ФИЛЬТРАЦИЕЙ ПО ДАТЕ
         fixtures = []
-        
-        # 🔥 КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Ограничиваем горизонт прогнозирования
         now_utc = datetime.now(timezone.utc)
-        max_date_utc = now_utc + timedelta(days=4)  # Ищем матчи только на ближайшие 4 дня
+        max_date_utc = now_utc + timedelta(days=4)
 
         for event in events:
             try:
@@ -114,23 +132,17 @@ def get_fixtures(league_key: str, force_refresh: bool = False) -> List[dict]:
                 if not commence_time_str:
                     continue
                 
-                # Парсим ISO-дату (API отдаёт с 'Z' на конце, заменяем на '+00:00' для Python)
                 commence_time = datetime.fromisoformat(commence_time_str.replace('Z', '+00:00'))
                 
-                # Проверяем: матч должен быть в будущем, но не дальше 4 дней
                 if now_utc <= commence_time <= max_date_utc:
                     fixture = _process_event(event, league_key)
                     if fixture:
                         fixtures.append(fixture)
-                else:
-                    # Матч либо уже прошёл, либо слишком далеко в будущем — игнорируем
-                    pass
-                    
             except ValueError as e:
                 logger.warning(f"⚠️ Ошибка парсинга даты матча: {e}")
                 continue
 
-        # 6. Сохраняем в кэш (теперь там только актуальные матчи!)
+        # 6. Сохраняем в кэш
         _cache[league_key] = {
             "data": fixtures,
             "ts": time.time(),
@@ -139,12 +151,18 @@ def get_fixtures(league_key: str, force_refresh: bool = False) -> List[dict]:
         return fixtures
 
     except httpx.TimeoutException:
-        logger.error(f"❌ Таймаут при загрузке расписания для {league_key}")
+        # Это исключение будет перехвачено tenacity для повтора. 
+        # Если мы здесь, значит 3 попытки исчерпаны.
+        logger.error(f"❌ Таймаут при загрузке расписания для {league_key} после 3 попыток")
+        return []
+    except httpx.HTTPStatusError as e:
+        # Это исключение будет перехвачено tenacity для повтора (если 5xx).
+        # Если мы здесь, значит 3 попытки исчерпаны.
+        logger.error(f"❌ Ошибка сервера The Odds API для {league_key} после 3 попыток: {e}")
         return []
     except Exception as e:
-        logger.error(f"❌ Ошибка загрузки расписания для {league_key}: {e}")
+        logger.error(f"❌ Критическая ошибка загрузки расписания для {league_key}: {e}")
         return []
-
 
 def _process_event(event: dict, league_key: str) -> Optional[dict]:
     """Обрабатывает один матч из ответа API"""

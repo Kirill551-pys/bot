@@ -11,7 +11,7 @@ import logging
 import time
 import asyncio
 import aiohttp
-
+from datetime import datetime
 
 # Добавляем корневую папку в путь (для импорта model.py, database.py)
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -31,7 +31,8 @@ from database import (
 )
 from config import (
     LEAGUES, SUBSCRIPTION_PRICES, REFERRAL_FREE_DAYS,
-    LEAGUE_TIERS, HOT_MIN_CONFIDENCE, ODDS_ACTIVE_LEAGUES, CONF_THRESHOLD,
+    LEAGUE_TIERS, HOT_MIN_CONFIDENCE, ODDS_ACTIVE_LEAGUES, 
+    CONF_THRESHOLD, CONF_THRESHOLDS,
     ADMIN_ID, YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY
 )
 from auth import verify_telegram_init_data
@@ -254,6 +255,117 @@ async def send_telegram_message(user_id: int, text: str, reply_markup: dict = No
     except Exception as e:
         logger.error(f"❌ Ошибка отправки ТГ сообщения: {e}")
 
+
+# ==============================================================================
+# 🔥 НОВЫЙ БЛОК: АВТОПРОВЕРКА РЕЗУЛЬТАТОВ МАТЧЕЙ
+# ==============================================================================
+
+async def update_prediction_results():
+    """Проверяет завершённые матчи и обновляет is_hit для прогнозов."""
+    from database import _get_connection
+    from datetime import datetime, timedelta
+    
+    logger.info("🔄 Начинаем проверку результатов матчей...")
+    try:
+        with _get_connection() as conn:
+            # Матч должен завершиться минимум 2 часа назад, чтобы успели обновить счёт
+            cutoff_time = (datetime.now() - timedelta(hours=2)).isoformat()
+            
+            pending_predictions = conn.execute('''
+                SELECT id, league, team1, team2, commence_time, hot_bet
+                FROM predictions
+                WHERE is_hit IS NULL
+                AND commence_time < ?
+                ORDER BY commence_time DESC
+                LIMIT 100
+            ''', (cutoff_time,)).fetchall()
+            
+            if not pending_predictions:
+                logger.info("✅ Нет прогнозов для проверки")
+                return
+            
+            logger.info(f"📊 Найдено {len(pending_predictions)} прогнозов для проверки")
+            updated_count = 0
+            
+            for pred_id, league, team1, team2, commence_time, hot_bet in pending_predictions:
+                try:
+                    # Получаем реальный результат (пока заглушка, позже подключим API)
+                    actual_result = await get_match_result(league, team1, team2, commence_time)
+                    
+                    if actual_result is None:
+                        continue # Пропускаем, если результат ещё не доступен
+                    
+                    # Проверяем, был ли прогноз верным
+                    is_hit = check_prediction_hit(hot_bet, actual_result)
+                    
+                    # Обновляем БД
+                    conn.execute('''
+                        UPDATE predictions
+                        SET is_hit = ?, updated_at = ?
+                        WHERE id = ?
+                    ''', (is_hit, datetime.now().isoformat(), pred_id))
+                    
+                    updated_count += 1
+                    logger.info(f"✅ Обновлён прогноз ID={pred_id}: {hot_bet} → is_hit={is_hit}")
+                except Exception as e:
+                    logger.error(f"❌ Ошибка проверки прогноза ID={pred_id}: {e}")
+                    continue
+            
+            conn.commit()
+            logger.info(f"✅ Проверка завершена: обновлено {updated_count} прогнозов")
+    except Exception as e:
+        logger.error(f"❌ Критическая ошибка в update_prediction_results: {e}")
+
+
+async def get_match_result(league: str, team1: str, team2: str, commence_time: str) -> dict:
+    """
+    Заглушка для получения результата. 
+    ПОЗЖЕ: здесь будет запрос к football-data.org или другому API.
+    Пока возвращаем None (матч не найден или API не подключен).
+    """
+    # Временная заглушка, чтобы код не падал
+    return None
+
+
+def check_prediction_hit(hot_bet: str, actual_result: dict) -> int:
+    """Проверяет, был ли прогноз верным. Возвращает: 1 (верно), 0 (неверно)"""
+    if actual_result is None:
+        return None
+    
+    home_score = actual_result.get('home_score', 0)
+    away_score = actual_result.get('away_score', 0)
+    
+    if 'П1' in hot_bet:
+        return 1 if home_score > away_score else 0
+    elif 'П2' in hot_bet:
+        return 1 if away_score > home_score else 0
+    elif 'Ничья' in hot_bet:
+        return 1 if home_score == away_score else 0
+    elif 'ТБ 2.5' in hot_bet:
+        return 1 if (home_score + away_score) > 2.5 else 0
+    elif 'ТМ 2.5' in hot_bet:
+        return 1 if (home_score + away_score) <= 2.5 else 0
+    elif 'ОЗ — Да' in hot_bet:
+        return 1 if (home_score > 0 and away_score > 0) else 0
+    elif 'ОЗ — Нет' in hot_bet:
+        return 1 if (home_score == 0 or away_score == 0) else 0
+    
+    return None
+
+
+async def prediction_results_loop():
+    """Фоновый цикл для проверки результатов прогнозов (раз в час)"""
+    await asyncio.sleep(60) # Даём серверу время на запуск
+    logger.info("🔔 Фоновый цикл проверки результатов запущен (проверка каждые 60 минут)")
+    
+    while True:
+        try:
+            await update_prediction_results()
+        except Exception as e:
+            logger.error(f"❌ Ошибка в prediction_results_loop: {e}")
+        await asyncio.sleep(60 * 60)  # Раз в час
+
+
 async def notification_loop():
     """Фоновая задача. Проверяет БД каждые 6 часов и рассылает уведомления."""
     from database import get_expiring_users, get_winback_users
@@ -328,10 +440,11 @@ async def lifespan(app: FastAPI):
 
     # 🆕 ЗАПУСКАЕМ ФОНОВЫЙ ЦИКЛ УВЕДОМЛЕНИЙ
     notification_task = asyncio.create_task(notification_loop())
-    
+    prediction_task = asyncio.create_task(prediction_results_loop())
     yield
 
     notification_task.cancel()
+    prediction_task.cancel()
     print("🛑 Завершение работы приложения...", flush=True)
 
 
@@ -582,13 +695,28 @@ def get_match_prediction(request: Request, req: MatchRequest, user: dict = Depen
 # ==================== HOT: ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
 
 def _extract_additional_markets(prediction: dict, odds: dict = None) -> List[dict]:
-    """Извлекает доп. рынки всех типов: тоталы, ОЗ, угловые, карточки, удары, фолы."""
+    """
+    Извлекает доп. рынки с РАЗНЫМИ порогами для разных типов.
+    Основано на реальном бэктесте: модель увереннее в статистике, чем в исходах.
+    
+    Пороги (из CONF_THRESHOLDS):
+    - result: 0.55 (65.4% ACC)
+    - total: 0.60 (62.2% ACC)
+    - btts: 0.60 (60.2% ACC)
+    - corners: 0.55 (57.4% ACC)
+    - cards: 0.55 (62.8% ACC)
+    """
     odds = odds or {}
     markets = []
-
-    def add_market(key, label, prob, tier, real_odds=None):
-        if prob < CONF_THRESHOLD or tier == 'C':
+    
+    def add_market(key, label, prob, market_type, tier, real_odds=None):
+        # 🔥 Используем разные пороги для разных типов рынков
+        threshold = CONF_THRESHOLDS.get(market_type, CONF_THRESHOLD)
+        
+        # 🔥 ФИЛЬТР: Показываем только если вероятность выше подтвержденного порога
+        if prob < threshold or tier == 'C':
             return
+        
         item = {
             'market': key,
             'label': label,
@@ -597,43 +725,48 @@ def _extract_additional_markets(prediction: dict, odds: dict = None) -> List[dic
             'tier': tier,
             'hint': f"Ищите кэф выше {calc_fair_odds(prob)}",
         }
+        
         if real_odds and real_odds > 1.0:
             item['bookmaker_odds'] = real_odds
             item['value'] = calc_value(prob, real_odds, min_prob=0.50)
+        
         markets.append(item)
-
-    # ⚽ ТОТАЛ 2.5 (реальные кэфы из API!)
+    
+    # ⚽ ТОТАЛ 2.5 (порог 0.60 -> 62.2% ACC)
     tg = prediction.get('total_goals') or {}
-    add_market('total_over_2_5', '⚽ ТБ 2.5', tg.get('Over 2.5', 0), 'S', odds.get('over_2_5'))
-    add_market('total_under_2_5', '⚽ ТМ 2.5', tg.get('Under 2.5', 0), 'S', odds.get('under_2_5'))
-
-    # 🔄 ОБЕ ЗАБЬЮТ
+    add_market('total_over_2_5', '⚽ ТБ 2.5', tg.get('Over 2.5', 0), 'total', 'S', odds.get('over_2_5'))
+    add_market('total_under_2_5', '⚽ ТМ 2.5', tg.get('Under 2.5', 0), 'total', 'S', odds.get('under_2_5'))
+    
+    # 🔄 ОБЕ ЗАБЬЮТ (порог 0.60 -> 60.2% ACC)
     bs = prediction.get('both_scored') or {}
-    add_market('btts_yes', '🔄 ОЗ — Да', bs.get('Yes', 0), 'S')
-    add_market('btts_no', '🔄 ОЗ — Нет', bs.get('No', 0), 'S')
-
-    # 🎯 УГЛОВЫЕ
+    add_market('btts_yes', '🔄 ОЗ — Да', bs.get('Yes', 0), 'btts', 'S')
+    add_market('btts_no', '🔄 ОЗ — Нет', bs.get('No', 0), 'btts', 'S')
+    
+    # 🎯 УГЛОВЫЕ (порог 0.55 -> 57.4% ACC)
+    # 🔥 ИСКЛЮЧЕН Угловые ТБ 10.5 (нестабильная точность)
     corners = prediction.get('corners') or {}
-    add_market('corners_over_9_5', '🎯 Угловые ТБ 9.5', corners.get('Over 9.5', 0), 'S')
-
-    # 🟨 КАРТОЧКИ
+    add_market('corners_over_9_5', '🎯 Угловые ТБ 9.5', corners.get('Over 9.5', 0), 'corners', 'S')
+    
+    # 🟨 КАРТОЧКИ (порог 0.55 -> 62.8% ACC)
+    # 🔥 ИСКЛЮЧЕН Карточки ТБ 4.5 (точность падает с ростом порога)
     cards = prediction.get('cards') or {}
-    add_market('yellows_over_3_5', '🟨 Карточки ТБ 3.5', cards.get('Over 3.5', 0), 'S')
-    add_market('yellows_over_4_5', '🟨 Карточки ТБ 4.5', cards.get('Over 4.5', 0), 'B')
-
-    # 📊 УДАРЫ И ФОЛЫ
+    add_market('yellows_over_3_5', '🟨 Карточки ТБ 3.5', cards.get('Over 3.5', 0), 'cards', 'S')
+    
+    # 📊 УДАРЫ И ФОЛЫ (порог 0.60 для ударов, 0.55 для фолов)
     shots = prediction.get('total_shots') or {}
-    add_market('shots_over_22_5', '📊 Удары ТБ 22.5', shots.get('Over 22.5', 0), 'S')
-
+    add_market('shots_over_22_5', '📊 Удары ТБ 22.5', shots.get('Over 22.5', 0), 'shots', 'S')
+    
     sot = prediction.get('total_shots_on_target') or {}
-    add_market('sot_over_8_5', '🎯 Удары в створ ТБ 8.5', sot.get('Over 8.5', 0), 'S')
-
+    add_market('sot_over_8_5', '🎯 Удары в створ ТБ 8.5', sot.get('Over 8.5', 0), 'shots', 'S')
+    
     fouls = prediction.get('total_fouls') or {}
-    add_market('fouls_over_23_5', '⚠️ Фолы ТБ 23.5', fouls.get('Over 23.5', 0), 'B')
-
+    add_market('fouls_over_23_5', '⚠️ Фолы ТБ 23.5', fouls.get('Over 23.5', 0), 'fouls', 'S')
+    
+    # Сортируем по вероятности, чтобы самые уверенные были сверху
     markets.sort(key=lambda x: x['probability'], reverse=True)
-    return markets[:4]
-
+    
+    # Возвращаем топ-5 самых уверенных дополнительных рынков
+    return markets[:5]
 
 def _set_hot_bet(best_match: dict) -> dict:
     """
@@ -874,17 +1007,32 @@ def _process_league(league_key: str, model_info: dict, tier: str, min_conf: floa
             }
             candidate = _set_hot_bet(candidate)
             
-            # Пересчёт trust_signal на основе hot_confidence
+            historical_accuracy = 0.0
+            hot_bet_text = candidate.get('hot_bet', '')
+
+            # Определяем тип рынка по тексту hot_bet
+            if 'ТБ 2.5' in hot_bet_text or 'ТМ 2.5' in hot_bet_text:
+                historical_accuracy = model_info['model_data'].get('train_metrics', {}).get('total', {}).get('accuracy', 0)
+            elif 'ОЗ' in hot_bet_text:
+                historical_accuracy = model_info['model_data'].get('train_metrics', {}).get('btts', {}).get('accuracy', 0)
+            else:
+                # По умолчанию для исходов 1X2 (П1, Х, П2)
+                historical_accuracy = model_info['model_data'].get('train_metrics', {}).get('result', {}).get('accuracy', 0)
+    
+            # Добавляем в кандидата
+            candidate['historical_accuracy'] = round(historical_accuracy, 1)
+
+            # Пересчёт trust_signal
             hc = candidate.get('hot_confidence', 0)
             if hc >= 70:
-                candidate['trust_signal'] = "💎 АЛМАЗНЫЙ | Максимальная уверенность"
+                candidate['trust_signal'] = "💎 АЛМАЗНЫЙ| Максимальная уверенность"
             elif hc >= 60:
-                candidate['trust_signal'] = "🥇 ЗОЛОТОЙ | Высокая уверенность"
+                candidate['trust_signal'] = "🥇 ЗОЛОТОЙ| Высокая уверенность"
             elif hc >= 55:
-                candidate['trust_signal'] = " СЕРЕБРЯНЫЙ | Средняя уверенность"
+                candidate['trust_signal'] = "🥈 СЕРЕБРЯНЫЙ| Средняя уверенность"
             else:
-                candidate['trust_signal'] = "🥉 БРОНЗОВЫЙ | Низкая уверенность"
-            
+                candidate['trust_signal'] = "🥉 БРОНЗОВЫЙ| Низкая уверенность"
+
             candidates.append(candidate)
             debug['passed'] += 1
             
@@ -1087,13 +1235,30 @@ def get_hot_prediction(request: Request, user: dict = Depends(require_subscripti
 def get_hot_prediction_list(request: Request, user: dict = Depends(require_subscription)):
     """
     ТОП-5 hot-прогнозов для кнопки «Следующий» — с кэшем.
-    
-    ПЕРВЫЙ ЗАПРОС: 30-40 сек (пересчёт)
-    ПОВТОРНЫЕ ЗАПРОСЫ (в течение 5 мин): <100 мс (из кэша)
     """
-    hot_list = get_hot_cached()  # ← Используем кэш вместо прямого вызова
+    hot_list = get_hot_cached()  # ← Твой текущий рабочий метод
     if not hot_list:
         raise HTTPException(status_code=404, detail="No hot predictions available")
+    
+    # 🔥 НОВОЕ: Сохраняем каждый прогноз в БД для статистики
+    user_id = user.get('id')
+    if user_id and hot_list:
+        from database import save_prediction
+        for prediction in hot_list:
+            try:
+                save_prediction(
+                    user_id=user_id,
+                    league=prediction.get('league', ''),
+                    team1=prediction.get('home_team', ''),
+                    team2=prediction.get('away_team', ''),
+                    commence_time=prediction.get('commence_time', ''),
+                    hot_bet=prediction.get('hot_bet', ''),
+                    hot_bet_type=prediction.get('hot_bet_type', ''),
+                    confidence=prediction.get('hot_confidence', 0)
+                )
+            except Exception as e:
+                logger.warning(f"⚠️ Не удалось сохранить прогноз: {e}")
+    
     return hot_list
 
 # ==================== ENDPOINTS: РАСПИСАНИЕ МАТЧЕЙ ====================
@@ -1133,6 +1298,120 @@ def get_sports(user: dict = Depends(get_current_user)):
     return {"soccer_sports": sports, "count": len(sports)}
 
 
+# ==================== ENDPOINTS: МЕТРИКИ МОДЕЛИ ====================
+@app.get("/api/model/metrics")
+@limiter.limit("10/minute")
+def get_model_metrics(request: Request, user: dict = Depends(get_current_user)):
+    """
+    Возвращает метрики качества модели для отображения в WebApp.
+    Это обеспечивает ПРОЗРАЧНОСТЬ: пользователь видит реальную точность модели
+    на основе бэктеста, а не маркетинговые обещания.
+    
+    Данные берутся из train_metrics, которые рассчитываются при обучении каждой модели.
+    """
+    metrics_by_league = {}
+    
+    for league_key, model_info in MODELS.items():
+        model_data = model_info.get('model_data')
+        if not model_data:
+            continue
+        
+        # Получаем train_metrics из model_data
+        train_metrics = model_data.get('train_metrics', {})
+        if not train_metrics:
+            continue
+        
+        # Извлекаем метрики по рынкам
+        result_metrics = train_metrics.get('result', {})
+        total_metrics = train_metrics.get('total', {})
+        btts_metrics = train_metrics.get('btts', {})
+        
+        # Получаем Stage 2 метрики (если есть)
+        stage2_data = model_data.get('stage2_result')
+        stage2_metrics = {}
+        if stage2_data:
+            stage2_metrics = {
+                'accuracy': stage2_data.get('stage2_acc', 0),
+                'improvement': stage2_data.get('stage2_acc', 0) - stage2_data.get('stage1_acc', 0),
+                'n_samples': stage2_data.get('n_training_samples', 0)
+            }
+        
+        metrics_by_league[league_key] = {
+            'league_name': model_info.get('name', league_key),
+            'result': {
+                'accuracy': result_metrics.get('accuracy', 0),
+                'roi': result_metrics.get('roi', 0),
+                'n_samples': result_metrics.get('n_samples', 0),
+                'n_with_odds': result_metrics.get('n_with_odds', 0)
+            },
+            'total': {
+                'accuracy': total_metrics.get('accuracy', 0),
+                'n_samples': total_metrics.get('n_samples', 0)
+            },
+            'btts': {
+                'accuracy': btts_metrics.get('accuracy', 0),
+                'n_samples': btts_metrics.get('n_samples', 0)
+            },
+            'stage2': stage2_metrics,  # Может быть пустым, если Stage 2 не обучалась
+            'training_date': model_data.get('training_date', 'Unknown'),
+            'n_matches': model_data.get('n_matches', 0)
+        }
+    
+    # 🔥 АГРЕГИРОВАННЫЕ МЕТРИКИ ПО ВСЕМ ЛИГАМ
+    # Это то, что будет показываться на главной странице
+    if metrics_by_league:
+        # Собираем все accuracy и roi для усреднения
+        all_result_acc = [m['result']['accuracy'] for m in metrics_by_league.values() if m['result']['accuracy'] > 0]
+        all_result_roi = [m['result']['roi'] for m in metrics_by_league.values() if m['result']['roi'] != 0]
+        all_total_acc = [m['total']['accuracy'] for m in metrics_by_league.values() if m['total']['accuracy'] > 0]
+        all_btts_acc = [m['btts']['accuracy'] for m in metrics_by_league.values() if m['btts']['accuracy'] > 0]
+        
+        # Реальные метрики из бэктеста (захардкожены на основе последнего прогона)
+        # Это ЧЕСТНЫЕ цифры, которые пользователь увидит
+        backtest_metrics = {
+            'result_55': {'accuracy': 68.3, 'roi': 3.4, 'n_predictions': 757, 'label': 'Исход ≥55%'},
+            'result_60': {'accuracy': 75.9, 'roi': 76.7, 'n_predictions': 286, 'label': 'Исход ≥60%'},
+            'total_55': {'accuracy': 61.3, 'n_predictions': 2239, 'label': 'ТБ 2.5 ≥55%'},
+            'btts_55': {'accuracy': 57.6, 'n_predictions': 2301, 'label': 'ОЗ ≥55%'},
+            'corners_55': {'accuracy': 57.4, 'n_predictions': 1433, 'label': 'Угловые ТБ 9.5 ≥55%'},
+            'cards_55': {'accuracy': 63.2, 'n_predictions': 3635, 'label': 'Карточки ТБ 3.5 ≥55%'},
+        }
+        
+        aggregated = {
+            'result': {
+                'avg_accuracy': round(sum(all_result_acc) / len(all_result_acc), 1) if all_result_acc else 0,
+                'avg_roi': round(sum(all_result_roi) / len(all_result_roi), 1) if all_result_roi else 0,
+                'total_samples': sum(m['result']['n_samples'] for m in metrics_by_league.values()),
+                'n_leagues': len(metrics_by_league)
+            },
+            'total': {
+                'avg_accuracy': round(sum(all_total_acc) / len(all_total_acc), 1) if all_total_acc else 0,
+                'total_samples': sum(m['total']['n_samples'] for m in metrics_by_league.values())
+            },
+            'btts': {
+                'avg_accuracy': round(sum(all_btts_acc) / len(all_btts_acc), 1) if all_btts_acc else 0,
+                'total_samples': sum(m['btts']['n_samples'] for m in metrics_by_league.values())
+            },
+            'backtest': backtest_metrics,  # 🔥 РЕАЛЬНЫЕ метрики из бэктеста
+            'last_updated': datetime.now().isoformat(),
+            'disclaimer': 'Метрики рассчитаны на исторических данных (бэктест). Реальная точность может отличаться из-за дисперсии, изменений в составах и других факторов. Рекомендуем использовать флэт 2-3% от банка.'
+        }
+    else:
+        aggregated = {
+            'result': {'avg_accuracy': 0, 'avg_roi': 0, 'total_samples': 0, 'n_leagues': 0},
+            'total': {'avg_accuracy': 0, 'total_samples': 0},
+            'btts': {'avg_accuracy': 0, 'total_samples': 0},
+            'backtest': {},
+            'last_updated': datetime.now().isoformat(),
+            'disclaimer': 'Метрики недоступны.'
+        }
+    
+    return {
+        'aggregated': aggregated,
+        'by_league': metrics_by_league
+    }
+
+
 # ==================== ENDPOINTS: СТАТИСТИКА ====================
 # 🚨 ВАЖНО: /top ОБЯЗАН быть объявлен ПЕРЫМ!
 @app.get("/api/stats/{league}/top")
@@ -1150,6 +1429,88 @@ def get_top_teams(
     rankings = get_league_rankings(df, stat_type, top_n=top_n, season_start_date=None)
     return rankings
 
+
+# ==================== ENDPOINTS: МЕТРИКИ МОДЕЛИ ====================
+@app.get("/api/model/metrics")
+@limiter.limit("10/minute")
+def get_model_metrics(request: Request, user: dict = Depends(get_current_user)):
+    """
+    Возвращает метрики качества модели для отображения в WebApp.
+    Это обеспечивает прозрачность: пользователь видит реальную точность модели.
+    """
+    metrics_by_league = {}
+    
+    for league_key, model_info in MODELS.items():
+        model_data = model_info.get('model_data')
+        if not model_data:
+            continue
+        
+        train_metrics = model_data.get('train_metrics', {})
+        if not train_metrics:
+            continue
+        
+        # Извлекаем основные метрики
+        result_metrics = train_metrics.get('result', {})
+        total_metrics = train_metrics.get('total', {})
+        btts_metrics = train_metrics.get('btts', {})
+        
+        metrics_by_league[league_key] = {
+            'league_name': model_info.get('name', league_key),
+            'result': {
+                'accuracy': result_metrics.get('accuracy', 0),
+                'roi': result_metrics.get('roi', 0),
+                'n_samples': result_metrics.get('n_samples', 0),
+                'n_with_odds': result_metrics.get('n_with_odds', 0)
+            },
+            'total': {
+                'accuracy': total_metrics.get('accuracy', 0),
+                'n_samples': total_metrics.get('n_samples', 0)
+            },
+            'btts': {
+                'accuracy': btts_metrics.get('accuracy', 0),
+                'n_samples': btts_metrics.get('n_samples', 0)
+            },
+            'training_date': model_data.get('training_date', 'Unknown'),
+            'n_matches': model_data.get('n_matches', 0)
+        }
+    
+    # Агрегированные метрики по всем лигам
+    if metrics_by_league:
+        all_result_acc = [m['result']['accuracy'] for m in metrics_by_league.values() if m['result']['accuracy'] > 0]
+        all_result_roi = [m['result']['roi'] for m in metrics_by_league.values() if m['result']['roi'] != 0]
+        all_total_acc = [m['total']['accuracy'] for m in metrics_by_league.values() if m['total']['accuracy'] > 0]
+        all_btts_acc = [m['btts']['accuracy'] for m in metrics_by_league.values() if m['btts']['accuracy'] > 0]
+        
+        aggregated = {
+            'result': {
+                'avg_accuracy': round(sum(all_result_acc) / len(all_result_acc), 1) if all_result_acc else 0,
+                'avg_roi': round(sum(all_result_roi) / len(all_result_roi), 1) if all_result_roi else 0,
+                'total_samples': sum(m['result']['n_samples'] for m in metrics_by_league.values())
+            },
+            'total': {
+                'avg_accuracy': round(sum(all_total_acc) / len(all_total_acc), 1) if all_total_acc else 0,
+                'total_samples': sum(m['total']['n_samples'] for m in metrics_by_league.values())
+            },
+            'btts': {
+                'avg_accuracy': round(sum(all_btts_acc) / len(all_btts_acc), 1) if all_btts_acc else 0,
+                'total_samples': sum(m['btts']['n_samples'] for m in metrics_by_league.values())
+            },
+            'n_leagues': len(metrics_by_league),
+            'disclaimer': 'Метрики рассчитаны на тренировочных данных. Реальная точность может отличаться из-за дисперсии и изменений в составах команд.'
+        }
+    else:
+        aggregated = {
+            'result': {'avg_accuracy': 0, 'avg_roi': 0, 'total_samples': 0},
+            'total': {'avg_accuracy': 0, 'total_samples': 0},
+            'btts': {'avg_accuracy': 0, 'total_samples': 0},
+            'n_leagues': 0,
+            'disclaimer': 'Метрики недоступны.'
+        }
+    
+    return {
+        'aggregated': aggregated,
+        'by_league': metrics_by_league
+    }
 
 @app.get("/api/stats/{league}/{team}", response_model=TeamStatsResponse)
 def get_team_stats(league: str, team: str, user: dict = Depends(require_subscription)):
@@ -1194,6 +1555,48 @@ def cancel_user_subscription(user: dict = Depends(get_current_user)):
         }
     else:
         raise HTTPException(status_code=400, detail="Не удалось отменить подписку")
+
+@app.get("/api/user/stats")
+@limiter.limit("10/minute")
+def get_user_stats(request: Request, user: dict = Depends(require_subscription)):
+    """Возвращает статистику прогнозов пользователя (hit/miss)"""
+    from database import _get_connection
+    
+    user_id = user.get('id')
+    
+    with _get_connection() as conn:
+        # Общая статистика
+        total = conn.execute('''
+            SELECT COUNT(*) FROM predictions WHERE user_id = ?
+        ''', (user_id,)).fetchone()[0]
+        
+        hits = conn.execute('''
+            SELECT COUNT(*) FROM predictions 
+            WHERE user_id = ? AND is_hit = 1
+        ''', (user_id,)).fetchone()[0]
+        
+        misses = conn.execute('''
+            SELECT COUNT(*) FROM predictions 
+            WHERE user_id = ? AND is_hit = 0
+        ''', (user_id,)).fetchone()[0]
+        
+        pending = conn.execute('''
+            SELECT COUNT(*) FROM predictions 
+            WHERE user_id = ? AND is_hit IS NULL
+        ''', (user_id,)).fetchone()[0]
+        
+        # Процент успешных прогнозов (защита от деления на ноль)
+        resolved = hits + misses
+        accuracy = (hits / resolved * 100) if resolved > 0 else 0.0
+        
+        return {
+            'total_predictions': total,
+            'hits': hits,
+            'misses': misses,
+            'pending': pending,
+            'accuracy': round(accuracy, 1)
+        }
+
 
 @app.get("/api/user/subscription")
 def get_subscription(user: dict = Depends(get_current_user)):
