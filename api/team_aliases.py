@@ -104,6 +104,7 @@ TEAM_ALIASES = {
     
     # ==================== Eredivisie ====================
     "Ajax": "Ajax",
+    "Telstar": "Telstar",
     "PSV": "PSV Eindhoven",
     "PSV Eindhoven": "PSV Eindhoven",
     "FC Twente Enschede": "Twente",
@@ -128,6 +129,7 @@ TEAM_ALIASES = {
     "AEK Athens": "AEK",
     "PAOK Thessaloniki": "PAOK",
     "Aris Thessaloniki": "Aris",
+    "Iraklis": "Iraklis",
 
     # ==================== Portugal ====================
     "Benfica": "Benfica",
