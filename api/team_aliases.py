@@ -8,10 +8,11 @@ TEAM_ALIASES = {
     "Man Utd": "Manchester United",
     "Man City": "Manchester City",
     "Manchester City": "Manchester City", 
-    "Coventry City": "Coventry City",   
+    "Coventry": "Coventry",   
     "Hull City": "Hull City",    
     "Leicester City": "Leicester City",  
     "Stoke City": "Stoke City",     
+    "Ipswich": "Ipswich", 
     "Nott'm Forest": "Nottingham Forest",
     "Nottingham Forest": "Nottingham Forest",
     "Brighton": "Brighton",
@@ -40,6 +41,7 @@ TEAM_ALIASES = {
     "Celta de Vigo": "Celta de Vigo",
     "Real Valladolid": "Valladolid",
     "Rayo Vallecano": "Rayo Vallecano",
+    "Malaga": "Malaga",
     
     # ==================== Bundesliga ====================
     "Eintracht Frankfurt": "Eintracht Frankfurt",
@@ -59,7 +61,9 @@ TEAM_ALIASES = {
     "TSG Hoffenheim": "TSG Hoffenheim",
     "1. FC Köln": "FC Koln",
     "FC Koln": "FC Koln",
-    
+    "Elversberg": "Elversberg",
+    "Paderborn": "Paderborn",  
+
     # ==================== Serie A ====================
     "AC Milan": "Milan",
     "Milan": "Milan",

@@ -494,7 +494,7 @@ def debug_info():
         "models_count": len(MODELS),
         "leagues_loaded": list(MODELS.keys()),
         "endpoints": endpoints[:25],
-        "has_hot_list_endpoint": any("/api/predictions/hot/list" in ep for ep in endpoints),
+        "has_hot_list_endpoint": any("/api/predictions/hot" in ep for ep in endpoints),
         "hot_endpoint_count": sum(1 for ep in endpoints if "/api/predictions/hot" in ep and "/list" not in ep),
         "hot_endpoint_methods": next(
             (list(r.methods) for r in app.routes
@@ -1240,7 +1240,7 @@ def get_hot_prediction(request: Request, user: dict = Depends(require_subscripti
     return hot_list[0]
 
 
-@app.get("/api/predictions/hot/list")
+@app.get("/api/predictions/hot")
 @limiter.limit("10/minute") 
 def get_hot_prediction_list(request: Request, user: dict = Depends(require_subscription)):
     """
