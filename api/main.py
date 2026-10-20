@@ -1,22 +1,28 @@
-from contextlib import asynccontextmanager
-from fastapi import FastAPI, Depends, Header, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import List, Optional
-from auth import verify_telegram_init_data # Твоя функция проверки
-
 import sys
 import os
 import logging
 import time
 import asyncio
 import aiohttp
+import uuid
 from datetime import datetime
+from contextlib import asynccontextmanager
 
-# Добавляем корневую папку в путь (для импорта model.py, database.py)
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+from fastapi import FastAPI, Depends, Header, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import List, Optional
 
-# ==================== ИМПОРТЫ ====================
+# 🔥 1. НАСТРОЙКА ПУТЕЙ (Делаем это ДО импорта любых локальных модулей!)
+# __file__ указывает на /var/www/tactika-bot/bot/api/main.py
+API_DIR = os.path.dirname(os.path.abspath(__file__))          # Папка api
+BASE_DIR = os.path.dirname(API_DIR)                           # Папка bot (корень)
+
+# Добавляем обе папки в самое начало списка поиска модулей Python
+sys.path.insert(0, BASE_DIR)
+sys.path.insert(0, API_DIR)
+
+# 🔥 2. ИМПОРТЫ ИЗ КОРНЯ ПРОЕКТА (папка bot/)
 from model import (
     load_matches_data, train_models, predict_match,
     load_model, save_model,
@@ -32,17 +38,18 @@ from database import (
 from config import (
     LEAGUES, SUBSCRIPTION_PRICES, REFERRAL_FREE_DAYS,
     LEAGUE_TIERS, HOT_MIN_CONFIDENCE, ODDS_ACTIVE_LEAGUES, 
-    CONF_THRESHOLD, CONF_THRESHOLDS,
-    ADMIN_ID, YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY
+    CONF_THRESHOLD, ADMIN_ID, YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY
 )
+
+# 🔥 3. ИМПОРТЫ ИЗ ТЕКУЩЕЙ ПАПКИ (папка api/)
 from auth import verify_telegram_init_data
 from team_aliases import normalize_team_name
 from fixtures_service import get_fixtures, calc_value, calc_fair_odds, get_available_sports
+
+# Сторонние библиотеки
 from yookassa import Payment, Configuration
-import uuid
 
-
-# Инициализация ЮKassa
+# ==================== ИНИЦИАЛИЗАЦИЯ ====================
 Configuration.account_id = YOOKASSA_SHOP_ID
 Configuration.secret_key = YOOKASSA_SECRET_KEY
 
