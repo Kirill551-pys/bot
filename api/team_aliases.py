@@ -73,6 +73,7 @@ TEAM_ALIASES = {
     "Hellas Verona": "Verona",
     "Verona": "Verona",
     "SPAL 2013": "Spal",
+    "Como": "Como",
 
     # 🇪 Ла Лига
     "Celta Vigo": "Celta",
@@ -120,6 +121,7 @@ TEAM_ALIASES = {
     "Besiktas": "Besiktas",
     "Beşiktaş": "Besiktas",
     "Trabzonspor": "Trabzonspor",
+    "Eyupspor": "Eyupspor",
     
     # ==================== Greece ====================
     "Olympiacos": "Olympiakos",

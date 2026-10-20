@@ -1128,6 +1128,8 @@ def _collect_hot_predictions(limit: int = 5) -> List[dict]:
                 
                 if probability_gap < MIN_PROBABILITY_GAP:
                     debug_stats[league_key]['low_gap'] += 1
+                    # Логируем, какой именно матч отброшен как "равный"
+                    logger.debug(f"🔗 Отклонён (низкий gap {probability_gap:.2f}): {home_team} vs {away_team} | Вероятности: {sorted_probs}")
                     continue
                 
                 # Проверяем уверенность модели
