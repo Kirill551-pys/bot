@@ -1240,7 +1240,7 @@ def get_hot_prediction(request: Request, user: dict = Depends(require_subscripti
     return hot_list[0]
 
 
-@app.get("/api/predictions/hot")
+@app.get("/api/predictions/hot/list")
 @limiter.limit("10/minute") 
 def get_hot_prediction_list(request: Request, user: dict = Depends(require_subscription)):
     """
