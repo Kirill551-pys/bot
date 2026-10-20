@@ -494,7 +494,7 @@ def debug_info():
         "models_count": len(MODELS),
         "leagues_loaded": list(MODELS.keys()),
         "endpoints": endpoints[:25],
-        "has_hot_list_endpoint": any("/api/predictions/hot" in ep for ep in endpoints),
+        "has_hot_list_endpoint": any("/api/predictions/hot/list" in ep for ep in endpoints),
         "hot_endpoint_count": sum(1 for ep in endpoints if "/api/predictions/hot" in ep and "/list" not in ep),
         "hot_endpoint_methods": next(
             (list(r.methods) for r in app.routes
@@ -939,9 +939,10 @@ def _process_league(league_key: str, model_info: dict, tier: str, min_conf: floa
             away_team = find_similar_team(away_normalized, all_teams, threshold=0.6)
             
             if not home_team or not away_team:
-                debug['teams_not_found'] += 1
+                debug_stats[league_key]['teams_not_found'] += 1
+                logger.info(f"❌ ОТСЕЯН (команда не найдена): {fixture['home_team']} vs {fixture['away_team']} | Нормализованные: {home_normalized} / {away_normalized}")
                 continue
-            
+
             # Критическая проверка: команды не должны совпадать
             if home_team == away_team:
                 debug['teams_not_found'] += 1
@@ -1136,6 +1137,7 @@ def _collect_hot_predictions(limit: int = 5) -> List[dict]:
                 max_prob = max(result_probs.values())
                 if max_prob < HOT_MIN_CONFIDENCE / 100.0:
                     debug_stats[league_key]['low_confidence'] += 1
+                    logger.info(f"📉 ОТСЕЯН (низкая уверенность): {home_team} vs {away_team} | Max prob: {max_prob:.3f} | Порог: {HOT_MIN_CONFIDENCE/100.0}")
                     continue
                 
                 # Считаем value для всех рынков
@@ -1152,6 +1154,7 @@ def _collect_hot_predictions(limit: int = 5) -> List[dict]:
                 # 🆕 ПРОВЕРКА 2: Есть ли валуй?
                 if best_value < MIN_VALUE_SCORE:
                     debug_stats[league_key]['no_value'] += 1
+                    logger.info(f"💰 ОТСЕЯН (нет валуя): {home_team} vs {away_team} | Best value: {best_value:.3f} | Порог: {MIN_VALUE_SCORE}")
                     continue
                 
                 # Извлекаем доп. рынки
