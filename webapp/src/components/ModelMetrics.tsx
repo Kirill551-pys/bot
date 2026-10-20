@@ -56,7 +56,7 @@ interface MetricsResponse {
 // Без этого Vite (порт 5173) вернёт index.html вместо JSON,
 // и мы получим ошибку: Unexpected token '<', "<!doctype "... is not valid JSON
 // Для продакшена замени на реальный домен, например https://tactika-bot.ru
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = ''; 
 
 // ==================== КОМПОНЕНТ ====================
 export function ModelMetrics() {
