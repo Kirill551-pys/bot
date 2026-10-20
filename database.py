@@ -401,18 +401,23 @@ def get_referral_count(user_id: int) -> int:
 
 
 def check_subscription_expired() -> int:
-    """Проверяет и деактивирует истёкшие подписки"""
+    """
+    Проверяет и деактивирует истёкшие подписки (включая trial!).
+    Вызывается фоновой задачей или вручную.
+    """
     now = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
     with _db_lock:
         with _get_connection() as conn:
+            # 🆕 ИСПРАВЛЕНО: Теперь включаем 'trial' в список тех, кого нужно отключать
             cursor = conn.execute('''
                 UPDATE subscribers
                 SET is_active = 0, subscription_type = 'free'
                 WHERE subscription_end < ? AND is_active = 1
-                AND subscription_type NOT IN ('free', 'trial')
+                AND subscription_type IN ('trial', 'promo_month', 'regular_month', 'quarter', 'winback_month')
             ''', (now,))
             conn.commit()
             return cursor.rowcount
+        
 
 
 def add_payment(user_id: int, amount: float, payment_method: str,
@@ -481,6 +486,7 @@ def is_subscription_active(user_id: int) -> bool:
     """
     Проверяет, есть ли у пользователя активная платная подписка или trial.
     Администратор (ADMIN_ID) всегда имеет полный доступ.
+    🆕 ДОБАВЛЕНО: Автоматическое закрытие доступа (self-healing), если дата истекла.
     """
     from config import ADMIN_ID
 
@@ -500,11 +506,11 @@ def is_subscription_active(user_id: int) -> bool:
         
         is_active, sub_type, sub_end = row
         
-        # Если тип подписки 'free', доступа нет (даже если is_active = 1)
+        # 1. Если тип подписки 'free', доступа нет
         if sub_type == 'free':
             return False
         
-        # Если подписка истекла
+        # 2. Проверка даты окончания
         if sub_end:
             try:
                 for fmt in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%S%z']:
@@ -512,8 +518,18 @@ def is_subscription_active(user_id: int) -> bool:
                         end_dt = datetime.strptime(sub_end, fmt)
                         if end_dt.tzinfo is None:
                             end_dt = end_dt.replace(tzinfo=timezone.utc)
+                        
+                        # 🚨 ЕСЛИ ПОДПИСКА ИСТЕКЛА
                         if end_dt < datetime.now(timezone.utc):
-                            return False
+                            # 🛠️ САМОЛЕЧЕНИЕ: Немедленно обновляем БД, чтобы фронтенд тоже увидел 'free'
+                            with _db_lock:
+                                conn.execute('''
+                                    UPDATE subscribers
+                                    SET is_active = 0, subscription_type = 'free'
+                                    WHERE user_id = ?
+                                ''', (user_id,))
+                                conn.commit()
+                            return False # Возвращаем False, доступа больше нет
                         break
                     except ValueError:
                         continue
@@ -521,7 +537,6 @@ def is_subscription_active(user_id: int) -> bool:
                 pass
         
         return bool(is_active)
-
 
 def get_subscription_info(user_id: int) -> dict:
     """
