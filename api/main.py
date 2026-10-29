@@ -39,7 +39,7 @@ from config import (
     LEAGUES, SUBSCRIPTION_PRICES, REFERRAL_FREE_DAYS,
     LEAGUE_TIERS, HOT_MIN_CONFIDENCE, ODDS_ACTIVE_LEAGUES, CONF_THRESHOLD,
     ADMIN_ID, YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY,
-    MIN_PROBABILITY_GAP, MIN_VALUE_SCORE
+    MIN_PROBABILITY_GAP, MIN_VALUE_SCORE, BOT_TOKEN, CONF_THRESHOLDS
 )
 
 # 🔥 3. ИМПОРТЫ ИЗ ТЕКУЩЕЙ ПАПКИ (папка api/)
@@ -109,69 +109,39 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
         headers={"Retry-After": "60"}
     )
 
+# main.py — функция get_hot_cached()
 def get_hot_cached() -> list:
-    """
-    Возвращает кэшированные hot-прогнозы или пересчитывает их если кэш устарел.
+    now = time.time()
     
-    ЛОГИКА РАБОТЫ:
-    1. Проверяем, есть ли валидный кэш (data не None И время не вышло)
-    2. Если да → возвращаем сразу (мгновенно!)
-    3. Если нет → проверяем, не пересчитывает ли кто-то уже (lock)
-    4. Если lock=True → возвращаем старый кэш (даже если устарел), чтобы не было гонки
-    5. Если lock=False → блокируем, пересчитываем, сохраняем, разблокируем
-    
-    ВОЗВРАЩАЕТ:
-    - Список из 0-5 hot-прогнозов (dict)
-    """
-    now = time.time()  # Текущее время в секундах (например, 1693564800.123)
-    
-    # ПРОВЕРКА 1: Кэш валиден?
-    # Условие: data не None (что-то есть) И сейчас < времени истечения
-    if HOT_CACHE['data'] is not None and now < HOT_CACHE['expires_at']:
-        # Кэш свежий → отдаём сразу
+    # ПРОВЕРКА 1: Кэш валиден И не пустой
+    if HOT_CACHE['data'] is not None and len(HOT_CACHE['data']) > 0 and now < HOT_CACHE['expires_at']:
         return HOT_CACHE['data']
     
-    # ПРОВЕРКА 2: Кто-то уже пересчитывает?
-    # Это защита от "гонки": если 10 пользователей одновременно запросили hot,
-    # и кэш устарел, мы не хотим чтобы все 10 начали пересчитывать одновременно.
-    # Первый начинает пересчёт (lock=True), остальные 9 ждут и получают старый кэш.
     if HOT_CACHE['lock']:
-        # Кто-то уже пересчитывает → возвращаем старый кэш (даже если устарел)
-        # Лучше старый кэш 5-минутной давности, чем 30-секундное ожидание
         return HOT_CACHE['data'] if HOT_CACHE['data'] else []
     
-    # ПРОВЕРКА 3: Нужно пересчитать
-    # Блокируем кэш (lock=True), чтобы другие запросы не начали пересчёт
     HOT_CACHE['lock'] = True
-    
     try:
-        # Логируем начало пересчёта (для отладки)
         print(f"🔄 Пересчёт hot-прогнозов...", flush=True)
-        start = time.time()  # Засекаем время начала
-        
-        # Вызываем тяжёлую функцию пересчёта
+        start = time.time()
         hot_list = _collect_hot_predictions(limit=5)
-        
-        # Считаем сколько времени заняло
         elapsed = time.time() - start
         print(f"✅ Hot пересчитан за {elapsed:.1f}с, найдено {len(hot_list)}", flush=True)
         
-        # СОХРАНЯЕМ В КЭШ:
-        HOT_CACHE['data'] = hot_list  # Сохраняем список прогнозов
-        HOT_CACHE['expires_at'] = now + HOT_CACHE_TTL  # Устанавливаем время истечения (сейчас + 5 минут)
-        
+        # 🔥 ВАЖНО: кэшируем только если есть результаты
+        # Если пусто — кэшируем на 15 минут (быстро перепроверим)
+        if len(hot_list) > 0:
+            HOT_CACHE['data'] = hot_list
+            HOT_CACHE['expires_at'] = now + HOT_CACHE_TTL  # 4 часа
+        else:
+            HOT_CACHE['data'] = []
+            HOT_CACHE['expires_at'] = now + 15 * 60  # 15 минут — быстро перепроверим
     except Exception as e:
-        # Если произошла ошибка — логируем, но не роняем сервер
         print(f"❌ Ошибка пересчёта hot: {e}", flush=True)
-        # Возвращаем старый кэш если есть
         return HOT_CACHE['data'] if HOT_CACHE['data'] else []
-        
     finally:
-        # РАЗБЛОКИРУЕМ кэш в любом случае (даже если была ошибка)
-        # Это важно: если не разблокировать, все последующие запросы будут ждать вечно
         HOT_CACHE['lock'] = False
     
-    # Возвращаем свежий кэш
     return HOT_CACHE['data']
 
 def load_all_models():
@@ -487,6 +457,15 @@ def debug_info():
     for route in app.routes:
         if hasattr(route, 'path') and hasattr(route, 'methods'):
             endpoints.append(f"{list(route.methods)} {route.path}")
+
+    #  Добавь диагностику fixtures
+    fixtures_debug = {}
+    for league_key in ODDS_ACTIVE_LEAGUES:
+        try:
+            fixtures = get_fixtures(league_key)
+            fixtures_debug[league_key] = len(fixtures) if fixtures else 0
+        except Exception as e:
+            fixtures_debug[league_key] = f"error: {str(e)[:50]}"
     
     return {
         "status": "OK",
@@ -939,8 +918,8 @@ def _process_league(league_key: str, model_info: dict, tier: str, min_conf: floa
             away_team = find_similar_team(away_normalized, all_teams, threshold=0.6)
             
             if not home_team or not away_team:
-                debug_stats[league_key]['teams_not_found'] += 1
-                logger.info(f"❌ ОТСЕЯН (команда не найдена): {fixture['home_team']} vs {fixture['away_team']} | Нормализованные: {home_normalized} / {away_normalized}")
+                debug['teams_not_found'] += 1  # <-- ИСПРАВЛЕНО
+                logger.info(f"❌ ОТСЕЯН (команда не найдена): {fixture['home_team']} vs {fixture['away_team']}")
                 continue
 
             # Критическая проверка: команды не должны совпадать
@@ -1124,20 +1103,109 @@ def _collect_hot_predictions(limit: int = 5) -> List[dict]:
                 result_probs = prediction.get('result', {})
                 
                 # 🆕 ПРОВЕРКА 1: Разрыв вероятностей (gap check)
-                sorted_probs = sorted(result_probs.values(), reverse=True)
-                probability_gap = sorted_probs[0] - sorted_probs[1] if len(sorted_probs) > 1 else 0
+                # ============================================================
+                # 🔥 МУЛЬТИ-РЫНОЧНАЯ ПРОВЕРКА: ищем уверенность на ЛЮБОМ рынке
+                # ============================================================
+                # Собираем все вероятности со всех рынков в один список
                 
-                if probability_gap < MIN_PROBABILITY_GAP:
-                    debug_stats[league_key]['low_gap'] += 1
-                    # Логируем, какой именно матч отброшен как "равный"
-                    logger.debug(f"🔗 Отклонён (низкий gap {probability_gap:.2f}): {home_team} vs {away_team} | Вероятности: {sorted_probs}")
-                    continue
-                
-                # Проверяем уверенность модели
-                max_prob = max(result_probs.values())
+                all_market_probs = []
+
+                # 1. Исход 1X2
+                result_probs = prediction.get('result', {})
+                for outcome, prob in result_probs.items():
+                    all_market_probs.append({
+                        'market': 'result',
+                        'outcome': outcome,
+                        'probability': prob,
+                        'label': {'Home Win': f'П1 ({home_team})', 'Draw': 'Ничья', 'Away Win': f'П2 ({away_team})'}.get(outcome, outcome)
+                    })
+
+                # 2. Тотал 2.5
+                tg_probs = prediction.get('total_goals', {})
+                for outcome, prob in tg_probs.items():
+                    all_market_probs.append({
+                        'market': 'total',
+                        'outcome': outcome,
+                        'probability': prob,
+                        'label': {'Over 2.5': 'ТБ 2.5', 'Under 2.5': 'ТМ 2.5'}.get(outcome, outcome)
+                    })
+
+                # 3. Обе забьют (ОЗ)
+                btts_probs = prediction.get('both_scored', {})
+                for outcome, prob in btts_probs.items():
+                    all_market_probs.append({
+                        'market': 'btts',
+                        'outcome': outcome,
+                        'probability': prob,
+                        'label': {'Yes': 'ОЗ - Да', 'No': 'ОЗ - Нет'}.get(outcome, outcome)
+                    })
+
+                # 4. Угловые (если есть)
+                corners_probs = prediction.get('corners', {})
+                for outcome, prob in corners_probs.items():
+                    all_market_probs.append({
+                        'market': 'corners',
+                        'outcome': outcome,
+                        'probability': prob,
+                        'label': outcome
+                    })
+
+                # 5. Карточки (если есть)
+                cards_probs = prediction.get('cards', {})
+                for outcome, prob in cards_probs.items():
+                    all_market_probs.append({
+                        'market': 'cards',
+                        'outcome': outcome,
+                        'probability': prob,
+                        'label': outcome
+                    })
+
+                # 6. Удары (если есть)
+                shots_probs = prediction.get('total_shots', {})
+                for outcome, prob in shots_probs.items():
+                    all_market_probs.append({
+                        'market': 'shots',
+                        'outcome': outcome,
+                        'probability': prob,
+                        'label': outcome
+                    })
+
+                # 7. Удары в створ (если есть)
+                sot_probs = prediction.get('total_shots_on_target', {})
+                for outcome, prob in sot_probs.items():
+                    all_market_probs.append({
+                        'market': 'sot',
+                        'outcome': outcome,
+                        'probability': prob,
+                        'label': outcome
+                    })
+
+                # 8. Фолы (если есть)
+                fouls_probs = prediction.get('total_fouls', {})
+                for outcome, prob in fouls_probs.items():
+                    all_market_probs.append({
+                        'market': 'fouls',
+                        'outcome': outcome,
+                        'probability': prob,
+                        'label': outcome
+                    })
+
+                # Находим ЛУЧШИЙ рынок по вероятности
+                best_market = max(all_market_probs, key=lambda x: x['probability'])
+                max_prob = best_market['probability']
+
+                # ПРОВЕРКА 1: Уверенность по ЛУЧШЕМУ рынку (а не только по исходу!)
                 if max_prob < HOT_MIN_CONFIDENCE / 100.0:
                     debug_stats[league_key]['low_confidence'] += 1
-                    logger.info(f"📉 ОТСЕЯН (низкая уверенность): {home_team} vs {away_team} | Max prob: {max_prob:.3f} | Порог: {HOT_MIN_CONFIDENCE/100.0}")
+                    continue
+
+                # ПРОВЕРКА 2: Разрыв вероятностей — только для исхода 1X2 (там это критично)
+                sorted_result_probs = sorted(result_probs.values(), reverse=True)
+                probability_gap = sorted_result_probs[0] - sorted_result_probs[1] if len(sorted_result_probs) > 1 else 0
+
+                # Если лучший рынок — НЕ исход, то gap не проверяем (для тоталов/ОЗ/угловых это бинарный рынок)
+                if best_market['market'] == 'result' and probability_gap < MIN_PROBABILITY_GAP:
+                    debug_stats[league_key]['low_gap'] += 1
                     continue
                 
                 # Считаем value для всех рынков
@@ -1148,8 +1216,18 @@ def _collect_hot_predictions(limit: int = 5) -> List[dict]:
                 tg_probs = prediction.get('total_goals') or {}
                 value_over = calc_value(tg_probs.get('Over 2.5', 0), odds.get('over_2_5'), min_prob=0.50)
                 value_under = calc_value(tg_probs.get('Under 2.5', 0), odds.get('under_2_5'), min_prob=0.50)
+
+                btts_probs = prediction.get('both_scored') or {}
+                value_btts = calc_value(btts_probs.get('Yes', 0), odds.get('btts_yes'), min_prob=0.50) if odds.get('btts_yes') else 0
+        
+                corners_probs = prediction.get('corners') or {}
+                value_corners = calc_value(corners_probs.get('Over 9.5', 0), odds.get('corners_over_9_5'), min_prob=0.50) if odds.get('corners_over_9_5') else 0
+
+                cards_probs = prediction.get('cards') or {}
+                value_cards = calc_value(cards_probs.get('Over 3.5', 0), odds.get('yellows_over_3_5'), min_prob=0.50) if odds.get('yellows_over_3_5') else 0
+
                 
-                best_value = max(value_home, value_draw, value_away, value_over, value_under)
+                best_value = max(value_home, value_draw, value_away, value_over, value_under, value_btts, value_corners, value_cards)                
                 
                 # 🆕 ПРОВЕРКА 2: Есть ли валуй?
                 if best_value < MIN_VALUE_SCORE:

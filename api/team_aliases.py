@@ -9,7 +9,7 @@ TEAM_ALIASES = {
     "Man City": "Manchester City",
     "Manchester City": "Manchester City", 
     "Coventry": "Coventry",   
-    "Hull City": "Hull City",    
+    "Hull": "Hull City",    
     "Leicester City": "Leicester City",  
     "Stoke City": "Stoke City",     
     "Ipswich": "Ipswich", 
@@ -27,7 +27,7 @@ TEAM_ALIASES = {
     "Sheffield United": "Sheffield United",
     "Tottenham": "Tottenham Hotspur",
     "Tottenham Hotspur": "Tottenham Hotspur",
-    
+
     # ==================== LaLiga ====================
     "Athletic Club": "Athletic Bilbao",
     "Athletic Bilbao": "Athletic Bilbao",
