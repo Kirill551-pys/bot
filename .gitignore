@@ -24,3 +24,5 @@ out/
 Thumbs.db
 
 BOT_TOKEN=your_telegram_bot_token_here
+
+./update.sh команда для обновления файлов 

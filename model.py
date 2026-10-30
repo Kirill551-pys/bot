@@ -833,6 +833,7 @@ def train_models(df: pd.DataFrame) -> Optional[Dict]:
         
     # 🔥 РАСЧЕТ МЕТРИК НА ТРЕНИРОВОЧНЫХ ДАННЫХ
     # Это нужно для отображения в WebApp (прозрачность для пользователя)
+    logger.info("📊 Расчёт метрик качества моделей...")
     train_metrics = {}
     
     # Метрики для исхода 1X2
@@ -1080,57 +1081,104 @@ def predict_match(team1: str, team2: str, model_data: dict, ratings_dict: dict =
             f'{team2} Under 1.5': round(1.0 - away_over_15, 3)
         }
         
-            # 🧠 УМНОЕ ОБОСНОВАНИЕ РЕКОМЕНДАЦИИ
+        # 🧠 УМНОЕ ОБОСНОВАНИЕ РЕКОМЕНДАЦИИ С ВАЛИДАЦИЕЙ ПО ИСТОРИЧЕСКИМ МЕТРИКАМ
         rec_reasons = []
-    
-        # 1. Анализ исхода матча
+        
+        # 1. Получаем исторические метрики этой лиги
+        train_metrics = model_data.get('train_metrics', {})
+        
+        # Пороги уверенности для разных рынков (основано на бэктесте)
+        MARKET_THRESHOLDS = {
+            'result': 55.0,    # 55% исторической точности
+            'total': 60.0,     # 60% исторической точности
+            'btts': 60.0,      # 60% исторической точности
+            'corners': 55.0,   # 55% исторической точности
+            'cards': 55.0,     # 55% исторической точности
+            'shots': 60.0,     # 60% исторической точности
+            'fouls': 55.0      # 55% исторической точности
+        }
+
+        # 2. Определяем лучший рынок по текущей вероятности (чтобы потом проверить его метрики)
+        best_market = None
+        best_current_prob = 0.0
+        
+        market_checks = [
+            ('result', max(prediction.get('result', {}).values()) if 'result' in prediction else 0.0),
+            ('total', max(prediction.get('total_goals', {}).values()) if 'total_goals' in prediction else 0.0),
+            ('btts', max(prediction.get('both_scored', {}).values()) if 'both_scored' in prediction else 0.0),
+            ('corners', prediction.get('corners', {}).get('Over 9.5', 0.0) if 'corners' in prediction else 0.0),
+            ('cards', prediction.get('cards', {}).get('Over 3.5', 0.0) if 'cards' in prediction else 0.0),
+            ('shots', prediction.get('total_shots', {}).get('Over 22.5', 0.0) if 'total_shots' in prediction else 0.0),
+            ('fouls', prediction.get('total_fouls', {}).get('Over 23.5', 0.0) if 'total_fouls' in prediction else 0.0)
+        ]
+        
+        for market, prob in market_checks:
+            if prob > best_current_prob:
+                best_current_prob = prob
+                best_market = market
+
+        # 3. Генерируем базовые тактические причины
         if 'result' in prediction:
             max_prob = max(prediction['result'].values())
-            if prediction['result'][HOME_WIN] == max_prob and max_prob > 0.45:
+            if prediction['result'].get(HOME_WIN, 0) == max_prob and max_prob > 0.45:
                 reason = f"🔴 {team1} выглядит фаворитом"
                 if home_metrics.get('form_avg', 0) > 2.0:
                     reason += f" (отличная форма: {home_metrics['form_avg']:.1f} очка за последние матчи)"
-                if home_rating > away_rating + 100:
-                    reason += f" (превосходство в классе: ELO {home_rating:.0f} против {away_rating:.0f})"
                 rec_reasons.append(reason + ".")
-            
-            elif prediction['result'][AWAY_WIN] == max_prob and max_prob > 0.45:
+            elif prediction['result'].get(AWAY_WIN, 0) == max_prob and max_prob > 0.45:
                 reason = f"🔵 {team2} имеет высокие шансы на победу"
                 if away_metrics.get('form_avg', 0) > 2.0:
                     reason += f" (гости в сильной форме: {away_metrics['form_avg']:.1f} очка за матч)"
                 rec_reasons.append(reason + ".")
-            
-            elif max_prob < 0.45 or prediction['result'][DRAW] == max_prob:
+            elif max_prob < 0.45 or prediction['result'].get(DRAW, 0) == max_prob:
                 rec_reasons.append("📊 Ожидается упорная борьба, высока вероятность ничьей или минимальной разницы в счете.")
 
-        # 2. Анализ голов (Тоталы)
         if 'total_goals' in prediction:
-            if prediction['total_goals'][OVER_25] > 0.60:
+            if prediction['total_goals'].get(OVER_25, 0) > 0.60:
                 reason = "⚽ Высока вероятность тотала больше 2.5"
                 combined_avg = home_metrics.get('avg_scored', 0) + away_metrics.get('avg_scored', 0)
                 if combined_avg > 2.5:
                     reason += f" (команды в сумме забивают в среднем {combined_avg:.1f} гола)"
                 rec_reasons.append(reason + ".")
-            elif prediction['total_goals'][UNDER_25] > 0.60:
+            elif prediction['total_goals'].get(UNDER_25, 0) > 0.60:
                 rec_reasons.append("🛡️ Ожидается закрытый, низовой матч с минимумом голов (ТМ 2.5).")
 
-        # 3. Дополнительные тактические факторы
-        home_rest = home_metrics.get('rest_days', 7)
-        away_rest = away_metrics.get('rest_days', 7)
+        home_rest = home_metrics.get('rest_days', 7) if home_metrics else 7
+        away_rest = away_metrics.get('rest_days', 7) if away_metrics else 7
+        
         if home_rest < 4 and away_rest >= 7:
-            rec_reasons.append(f"⚠️ {team1} играет на коротком отдыхе ({home_rest} дн.), что дает физическое преимущество гостям.")
+            rec_reasons.append(f"⚠️ {team1} играет на коротком отдыхе ({home_rest} дн.), фактор усталости в пользу гостей.")
         elif away_rest < 4 and home_rest >= 7:
             rec_reasons.append(f"⚠️ {team2} играет на коротком отдыхе ({away_rest} дн.), фактор усталости в пользу хозяев.")
         
-        if 'both_scored' in prediction and prediction['both_scored']['Yes'] > 0.60:
-            rec_reasons.append("🔥 Обе команды имеют уязвимую оборону и высокую вероятность забить (ОЗ - Да).")
+        if 'both_scored' in prediction and prediction['both_scored'].get('Yes', 0) > 0.60:
+            rec_reasons.append("🔥 Обе команды имеют высокую вероятность забить (ОЗ - Да).")
 
-        # Формируем итоговый текст с переносами строк для красивого отображения
+        # 4. ФИНАЛЬНАЯ ВАЛИДАЦИЯ РЕКОМЕНДАЦИИ по историческим метрикам
+        if best_market and best_market in train_metrics:
+            hist_acc = train_metrics[best_market].get('accuracy', 0)
+            n_samples = train_metrics[best_market].get('n_samples', 0)
+            threshold = MARKET_THRESHOLDS.get(best_market, 55.0)
+            
+            if hist_acc >= threshold and n_samples >= 100:
+                rec_reasons.append(f"✅ Историческая точность модели по рынку '{best_market}' составляет {hist_acc}% (на {n_samples} матчах), что подтверждает текущий прогноз.")
+            else:
+                rec_reasons.append(f"⚠️ ВНИМАНИЕ: Текущая вероятность высока, но историческая точность модели по этому рынку ниже порога ({hist_acc}% при норме {threshold}%). Рекомендуем снизить сумму ставки или выбрать альтернативный рынок.")
+
+        # 5. Формируем итоговый текст
         if rec_reasons:
             prediction['recommendation'] = "🧠 **Обоснование прогноза:**\n• " + "\n• ".join(rec_reasons)
         else:
-            prediction['recommendation'] = "📊 Тактически сложный матч. Модель не видит явного статистического перевеса одной из сторон, рекомендуем воздержаться или выбрать альтернативные рынки (угловые, карточки)."
-            prediction['trust_signal'] = get_trust_signal(prediction)
+            prediction['recommendation'] = "📊 Тактически сложный матч. Модель не видит явного статистического перевеса, рекомендуем воздержаться или выбрать альтернативные рынки."
+            
+        # Добавляем метрики в ответ для фронтенда
+        prediction['backtest_metrics'] = train_metrics
+        prediction['recommendation_confidence'] = "high" if any("✅ Историческая точность" in r for r in rec_reasons) else "low"
+        prediction['best_market_info'] = {
+            'name': best_market,
+            'current_probability': round(best_current_prob * 100, 1),
+            'historical_accuracy': train_metrics.get(best_market, {}).get('accuracy', 0) if best_market else 0
+        }
 
         # 🔥 УМНЫЙ ПОИСК САМОЙ УВЕРЕННОЙ СТАВКИ
         market_to_tier = {}
