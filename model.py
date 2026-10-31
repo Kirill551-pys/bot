@@ -699,85 +699,57 @@ def train_models(df: pd.DataFrame) -> Optional[Dict]:
         )
         models['ht_result'].fit(X_scaled, y_ht, sample_weight=sample_weights)
     
-    # 🔥 5. Тотал ударов
-    models['home_shots'] = CalibratedClassifierCV(
-        XGBClassifier(
-            n_estimators=150,
-            max_depth=4,
-            learning_rate=0.06,
-            subsample=0.8,
-            colsample_bytree=0.8,
-            min_child_weight=2,
-            gamma=0.1,
-            reg_alpha=0.1,
-            reg_lambda=1.2,
-            objective='binary:logistic',
-            random_state=42,
-            eval_metric='logloss'
-        ),
-        method='sigmoid',
-        cv=tscv
+    # 🔥 5. Тотал ударов (ТБ 22.5) — обучаем только если есть данные
+    if 'home_shots' in df.columns and 'away_shots' in df.columns:
+        logger.info("📊 Обучение модели ударов (ТБ 22.5)...")
+        total_shots = df_with_ratings['home_shots'].fillna(0) + df_with_ratings['away_shots'].fillna(0)
+        y_shots_225 = (total_shots > 22.5).astype(int).values
+        
+        models['shots_over_22_5'] = CalibratedClassifierCV(
+            XGBClassifier(n_estimators=150, max_depth=4, learning_rate=0.06, subsample=0.8, colsample_bytree=0.8, min_child_weight=2, gamma=0.1, reg_alpha=0.1, reg_lambda=1.2, objective='binary:logistic', random_state=42, eval_metric='logloss'),
+            method='sigmoid', cv=tscv
         )
+        models['shots_over_22_5'].fit(X_scaled, y_shots_225, sample_weight=sample_weights)
     
-    # 🔥 6. Тотал ударов в створ
-    models['home_shots_on_target'] = CalibratedClassifierCV(
-        XGBClassifier(
-            n_estimators=150,
-            max_depth=4,
-            learning_rate=0.06,
-            subsample=0.8,
-            colsample_bytree=0.8,
-            min_child_weight=2,
-            gamma=0.1,
-            reg_alpha=0.1,
-            reg_lambda=1.2,
-            objective='binary:logistic',
-            random_state=42,
-            eval_metric='logloss'
-        ),
-        method='sigmoid',
-        cv=tscv
-    )
+    
+    # 🔥 6. Тотал ударов в створ (ТБ 8.5)
+    if 'home_shots_on_target' in df.columns and 'away_shots_on_target' in df.columns:
+        logger.info("🎯 Обучение модели ударов в створ (ТБ 8.5)...")
+        total_sot = df_with_ratings['home_shots_on_target'].fillna(0) + df_with_ratings['away_shots_on_target'].fillna(0)
+        y_sot_85 = (total_sot > 8.5).astype(int).values
+        
+        models['sot_over_8_5'] = CalibratedClassifierCV(
+            XGBClassifier(n_estimators=150, max_depth=4, learning_rate=0.06, subsample=0.8, colsample_bytree=0.8, min_child_weight=2, gamma=0.1, reg_alpha=0.1, reg_lambda=1.2, objective='binary:logistic', random_state=42, eval_metric='logloss'),
+            method='sigmoid', cv=tscv
+        )
+        models['sot_over_8_5'].fit(X_scaled, y_sot_85, sample_weight=sample_weights)
+    
 
-    # 🔥 7. Тотал фолов
-    models['home_fouls'] = CalibratedClassifierCV(
-        XGBClassifier(
-            n_estimators=150,
-            max_depth=4,
-            learning_rate=0.06,
-            subsample=0.8,
-            colsample_bytree=0.8,
-            min_child_weight=2,
-            gamma=0.1,
-            reg_alpha=0.1,
-            reg_lambda=1.2,
-            objective='binary:logistic',
-            random_state=42,
-            eval_metric='logloss'
-        ),
-        method='sigmoid',
-        cv=tscv
-    )
+    # 🔥 7. Тотал фолов (ТБ 23.5)
+    if 'home_fouls' in df.columns and 'away_fouls' in df.columns:
+        logger.info("⚠️ Обучение модели фолов (ТБ 23.5)...")
+        total_fouls = df_with_ratings['home_fouls'].fillna(0) + df_with_ratings['away_fouls'].fillna(0)
+        y_fouls_235 = (total_fouls > 23.5).astype(int).values
+        
+        models['fouls_over_23_5'] = CalibratedClassifierCV(
+            XGBClassifier(n_estimators=150, max_depth=4, learning_rate=0.06, subsample=0.8, colsample_bytree=0.8, min_child_weight=2, gamma=0.1, reg_alpha=0.1, reg_lambda=1.2, objective='binary:logistic', random_state=42, eval_metric='logloss'),
+            method='sigmoid', cv=tscv
+        )
+        models['fouls_over_23_5'].fit(X_scaled, y_fouls_235, sample_weight=sample_weights)
+    
 
-    # 🔥 8. ОЗ в 1-м тайме (БЕЗОПАСНАЯ ВЕРСИЯ)
-    models['ht_home_goals'] = CalibratedClassifierCV(
-        XGBClassifier(
-            n_estimators=150,
-            max_depth=4,
-            learning_rate=0.06,
-            subsample=0.8,
-            colsample_bytree=0.8,
-            min_child_weight=2,
-            gamma=0.1,
-            reg_alpha=0.1,
-            reg_lambda=1.2,
-            objective='binary:logistic',
-            random_state=42,
-            eval_metric='logloss'
-        ),
-        method='sigmoid',
-        cv=tscv
-    )
+    # 🔥 8. ОЗ в 1-м тайме
+    if 'ht_home_goals' in df.columns and 'ht_away_goals' in df.columns:
+        logger.info("⏱️ Обучение модели ОЗ в 1-м тайме...")
+        ht_home = pd.to_numeric(df_with_ratings['ht_home_goals'], errors='coerce').fillna(0)
+        ht_away = pd.to_numeric(df_with_ratings['ht_away_goals'], errors='coerce').fillna(0)
+        y_btts_ht = ((ht_home > 0) & (ht_away > 0)).astype(int).values
+        
+        models['btts_ht'] = CalibratedClassifierCV(
+            XGBClassifier(n_estimators=150, max_depth=4, learning_rate=0.06, subsample=0.8, colsample_bytree=0.8, min_child_weight=2, gamma=0.1, reg_alpha=0.1, reg_lambda=1.2, objective='binary:logistic', random_state=42, eval_metric='logloss'),
+            method='sigmoid', cv=tscv
+        )
+        models['btts_ht'].fit(X_scaled, y_btts_ht, sample_weight=sample_weights)
 
     # 🔥 9. УГЛОВЫЕ: Тотал больше 9.5
     if 'home_corners' in df.columns and 'away_corners' in df.columns:
@@ -894,7 +866,34 @@ def train_models(df: pd.DataFrame) -> Optional[Dict]:
             'accuracy': round(btts_acc, 1),
             'n_samples': len(y_btts)
         }
+
+    # Метрики для ударов
+    if 'shots_over_22_5' in models:
+        shots_probs = models['shots_over_22_5'].predict_proba(X_scaled)[:, 1]
+        shots_preds = (shots_probs > 0.5).astype(int)
+        shots_acc = (shots_preds == y_shots_225).mean() * 100
+        train_metrics['shots'] = {'accuracy': round(shots_acc, 1), 'n_samples': len(y_shots_225)}
     
+    # Метрики для ударов в створ
+    if 'sot_over_8_5' in models:
+        sot_probs = models['sot_over_8_5'].predict_proba(X_scaled)[:, 1]
+        sot_preds = (sot_probs > 0.5).astype(int)
+        sot_acc = (sot_preds == y_sot_85).mean() * 100
+        train_metrics['sot'] = {'accuracy': round(sot_acc, 1), 'n_samples': len(y_sot_85)}
+    
+    # Метрики для фолов
+    if 'fouls_over_23_5' in models:
+        fouls_probs = models['fouls_over_23_5'].predict_proba(X_scaled)[:, 1]
+        fouls_preds = (fouls_probs > 0.5).astype(int)
+        fouls_acc = (fouls_preds == y_fouls_235).mean() * 100
+        train_metrics['fouls'] = {'accuracy': round(fouls_acc, 1), 'n_samples': len(y_fouls_235)}
+    
+    # Метрики для ОЗ в 1-м тайме
+    if 'btts_ht' in models:
+        btts_ht_probs = models['btts_ht'].predict_proba(X_scaled)[:, 1]
+        btts_ht_preds = (btts_ht_probs > 0.5).astype(int)
+        btts_ht_acc = (btts_ht_preds == y_btts_ht).mean() * 100
+        train_metrics['btts_ht'] = {'accuracy': round(btts_ht_acc, 1), 'n_samples': len(y_btts_ht)}
     logger.info(f"📊 Метрики обучения: {train_metrics}")
 
 
