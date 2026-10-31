@@ -1045,8 +1045,9 @@ def _collect_hot_predictions(limit: int = 5) -> List[dict]:
             'teams_not_found': 0,
             'prediction_errors': 0,
             'low_confidence': 0,
-            'low_gap': 0,  # 🆕 Низкий разрыв вероятностей
-            'no_value': 0,  # 🆕 Нет валуя
+            'low_gap': 0, 
+            'no_value': 0,  
+            'low_historical_accuracy': 0,
             'passed': 0,
         }
         
@@ -1234,6 +1235,65 @@ def _collect_hot_predictions(limit: int = 5) -> List[dict]:
                     debug_stats[league_key]['no_value'] += 1
                     logger.info(f"💰 ОТСЕЯН (нет валуя): {home_team} vs {away_team} | Best value: {best_value:.3f} | Порог: {MIN_VALUE_SCORE}")
                     continue
+
+                train_metrics = model_info['model_data'].get('train_metrics', {})
+
+                best_market_for_check = None
+                best_prob_for_check = 0.0
+
+                market_checks = [
+                    ('result', max(result_probs.values()) if result_probs else 0.0),
+                    ('total', max(prediction.get('total_goals', {}).values()) if prediction.get('total_goals') else 0.0),
+                    ('btts', max(prediction.get('both_scored', {}).values()) if prediction.get('both_scored') else 0.0),
+                    ('corners', prediction.get('corners', {}).get('Over 9.5', 0.0) if prediction.get('corners') else 0.0),
+                    ('cards', prediction.get('cards', {}).get('Over 3.5', 0.0) if prediction.get('cards') else 0.0),
+                ]
+
+                for market, prob in market_checks:
+                    if prob > best_prob_for_check:
+                        best_prob_for_check = prob
+                        best_market_for_check = market
+
+                hist_acc = 0.0
+                n_samples = 0
+                if best_market_for_check and best_market_for_check in train_metrics:
+                    hist_acc = train_metrics[best_market_for_check].get('accuracy', 0)
+                    n_samples = train_metrics[best_market_for_check].get('n_samples', 0)
+
+                # 🎯 ГИБРИДНАЯ ЛОГИКА:
+                if best_prob_for_check >= 0.70:
+                    # Очень высокая уверенность → пропускаем всегда
+                    candidate_historical_warning = False
+                    candidate_trust_boost = "high_confidence"
+
+                elif best_prob_for_check >= 0.65:
+                    # Средняя уверенность → проверяем историю
+                    if hist_acc >= 55.0 and n_samples >= 100:
+                        candidate_historical_warning = False
+                        candidate_trust_boost = "good_history"
+                    else:
+                        # История плохая → помечаем как риск, но НЕ отсеиваем
+                        candidate_historical_warning = True
+                        candidate_trust_boost = "risky"
+
+                elif best_prob_for_check >= 0.60:
+                    # Низкая средняя уверенность → строгая проверка истории
+                    if hist_acc >= 60.0 and n_samples >= 100:
+                        candidate_historical_warning = False
+                        candidate_trust_boost = "good_history"
+                    else:
+                        # Иначе → отсеиваем
+                        debug_stats[league_key]['low_historical_accuracy'] += 1
+                        logger.info(f"⚠️ ОТСЕЯН (средняя уверенность + плохая история): "
+                                    f"{home_team} vs {away_team} | "
+                                    f"Уверенность: {best_prob_for_check*100:.1f}%, "
+                                    f"История: {hist_acc:.0f}%")
+                        continue
+
+                else:
+                    # Уверенность < 60% → отсеиваем
+                    debug_stats[league_key]['low_confidence'] += 1
+                    continue
                 
                 # Извлекаем доп. рынки
                 additional_markets = _extract_additional_markets(prediction, odds)
@@ -1299,6 +1359,7 @@ def _collect_hot_predictions(limit: int = 5) -> List[dict]:
         print(f"   📉 Низкая уверенность: {stats['low_confidence']}", flush=True)
         print(f"   🔗 Низкий разрыв (gap): {stats['low_gap']}", flush=True)
         print(f"    Нет валуя: {stats['no_value']}", flush=True)
+        print(f"   ⚠️ Плохая история: {stats['low_historical_accuracy']}", flush=True)  # 🆕
         print(f"    ПРОШЛО: {stats['passed']}", flush=True)
     print("="*60 + "\n", flush=True)
     
