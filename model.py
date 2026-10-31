@@ -1029,48 +1029,59 @@ def predict_match(team1: str, team2: str, model_data: dict, ratings_dict: dict =
             probs = models['ht_result'].predict_proba(features_scaled)[0]
             prediction['first_half_result'] = {'Home Win': float(probs[2]), 'Draw': float(probs[1]), 'Away Win': float(probs[0])}
         
+            # Безопасная функция для получения вероятности второго класса
+        def safe_predict_proba(model, features):
+            try:
+                probs = model.predict_proba(features)[0]
+                # Если модель вернула только 1 класс, возвращаем 0.5
+                if len(probs) < 2:
+                    return 0.5
+                return float(probs[1])
+            except Exception:
+                return 0.5
+    
         if 'shots_over_22_5' in models:
-            prob = models['shots_over_22_5'].predict_proba(features_scaled)[0][1]
-            prediction['total_shots'] = {'Over 22.5': float(prob), 'Under 22.5': float(1 - prob)}
-            
+            prob = safe_predict_proba(models['shots_over_22_5'], features_scaled)
+            prediction['total_shots'] = {'Over 22.5': prob, 'Under 22.5': 1 - prob}
+    
         if 'sot_over_8_5' in models:
-            prob = models['sot_over_8_5'].predict_proba(features_scaled)[0][1]
-            prediction['total_shots_on_target'] = {'Over 8.5': float(prob), 'Under 8.5': float(1 - prob)}
-            
+            prob = safe_predict_proba(models['sot_over_8_5'], features_scaled)
+            prediction['total_shots_on_target'] = {'Over 8.5': prob, 'Under 8.5': 1 - prob}
+    
         if 'fouls_over_23_5' in models:
-            prob = models['fouls_over_23_5'].predict_proba(features_scaled)[0][1]
-            prediction['total_fouls'] = {'Over 23.5': float(prob), 'Under 23.5': float(1 - prob)}
-            
+            prob = safe_predict_proba(models['fouls_over_23_5'], features_scaled)
+            prediction['total_fouls'] = {'Over 23.5': prob, 'Under 23.5': 1 - prob}
+    
         if 'btts_ht' in models:
-            prob = models['btts_ht'].predict_proba(features_scaled)[0][1]
-            prediction['btts_first_half'] = {'Yes': float(prob), 'No': float(1 - prob)}
-
+            prob = safe_predict_proba(models['btts_ht'], features_scaled)
+            prediction['btts_first_half'] = {'Yes': prob, 'No': 1 - prob}
+    
         # 🎯 УГЛОВЫЕ (Corners)
         if 'corners_over_9_5' in models and 'corners_over_10_5' in models:
-            prob_95 = models['corners_over_9_5'].predict_proba(features_scaled)[0][1]
-            prob_105 = models['corners_over_10_5'].predict_proba(features_scaled)[0][1]
-        
+            prob_95 = safe_predict_proba(models['corners_over_9_5'], features_scaled)
+            prob_105 = safe_predict_proba(models['corners_over_10_5'], features_scaled)
             # Логическая корректировка: P(>10.5) не может быть больше P(>9.5)
             if prob_105 > prob_95:
-                prob_105 = prob_95 * 0.85  # Снижаем вероятность
-        
+                prob_105 = prob_95 * 0.85
             prediction['corners'] = {
-                'Over 9.5': round(float(prob_95), 3),
-                'Under 9.5': round(float(1 - prob_95), 3)
+                'Over 9.5': round(prob_95, 3),
+                'Under 9.5': round(1 - prob_95, 3),
+                'Over 10.5': round(prob_105, 3),
+                'Under 10.5': round(1 - prob_105, 3)
             }
     
         # 🟨 КАРТОЧКИ (Yellows)
         if 'yellows_over_3_5' in models and 'yellows_over_4_5' in models:
-            prob_35 = models['yellows_over_3_5'].predict_proba(features_scaled)[0][1]
-            prob_45 = models['yellows_over_4_5'].predict_proba(features_scaled)[0][1]
-        
+            prob_35 = safe_predict_proba(models['yellows_over_3_5'], features_scaled)
+            prob_45 = safe_predict_proba(models['yellows_over_4_5'], features_scaled)
             # Логическая корректировка: P(>4.5) не может быть больше P(>3.5)
             if prob_45 > prob_35:
                 prob_45 = prob_35 * 0.80
-        
             prediction['cards'] = {
-                'Over 3.5': round(float(prob_35), 3),
-                'Under 3.5': round(float(1 - prob_35), 3)
+                'Over 3.5': round(prob_35, 3),
+                'Under 3.5': round(1 - prob_35, 3),
+                'Over 4.5': round(prob_45, 3),
+                'Under 4.5': round(1 - prob_45, 3)
             }
 
         # Индивидуальные тоталы (через распределение Пуассона)
