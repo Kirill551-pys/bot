@@ -888,13 +888,20 @@ def train_models(df: pd.DataFrame) -> Optional[Dict]:
         fouls_acc = (fouls_preds == y_fouls_235).mean() * 100
         train_metrics['fouls'] = {'accuracy': round(fouls_acc, 1), 'n_samples': len(y_fouls_235)}
     
-    # Метрики для ОЗ в 1-м тайме
+    
+    # 🔥 БЕЗОПАСНЫЙ расчёт метрик для ОЗ в 1-м тайме
     if 'btts_ht' in models:
-        btts_ht_probs = models['btts_ht'].predict_proba(X_scaled)[:, 1]
-        btts_ht_preds = (btts_ht_probs > 0.5).astype(int)
-        btts_ht_acc = (btts_ht_preds == y_btts_ht).mean() * 100
-        train_metrics['btts_ht'] = {'accuracy': round(btts_ht_acc, 1), 'n_samples': len(y_btts_ht)}
-    logger.info(f"📊 Метрики обучения: {train_metrics}")
+        try:
+            btts_ht_probs = models['btts_ht'].predict_proba(X_scaled)
+            # Проверяем, что модель выдала вероятности для 2 классов (0 и 1)
+            if btts_ht_probs.shape[1] == 2:
+                btts_ht_preds = (btts_ht_probs[:, 1] > 0.5).astype(int)
+                btts_ht_acc = (btts_ht_preds == y_btts_ht).mean() * 100
+                train_metrics['btts_ht'] = {'accuracy': round(btts_ht_acc, 1), 'n_samples': len(y_btts_ht)}
+            else:
+                logger.warning("⚠️ Модель btts_ht выдала только 1 класс, пропускаем расчёт метрики")
+        except Exception as e:
+            logger.warning(f"⚠️ Ошибка расчёта метрики btts_ht: {e}")
 
 
     logger.info(f"✅ Обучение завершено! Моделей: {len(models)}")
