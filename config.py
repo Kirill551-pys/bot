@@ -158,7 +158,7 @@ LEAGUE_TIERS = {
     'seriaA': 'S', 'poland': 'S', 'eredivisise': 'S', 'rpl': 'S',
     'norway': 'B', 'brazil': 'B', 'turkey': 'B', 'belgium': 'B',
     'bundesliga': 'B', 'mexico': 'B', 'romania': 'B',
-    'argentina': 'C', 'usa': 'C', 'japan': 'C', 'austria': 'C', 'ligue1': 'C',
+    'argentina': 'C', 'usa': 'C', 'japan': 'C', 'austria': 'C', 'ligue1': 'C', 'champions_league': 'S',
 }
 
 # Единый строгий порог уверенности модели (65% - это уже очень много для футбола)
@@ -205,10 +205,11 @@ ODDS_LEAGUES_MAP = {
     "dania":            "soccer_denmark_superliga",
     "austria":          "soccer_austria_bundesliga",
     "romania":          "soccer_romania_liga_1",
+    "usa":              "soccer_usa_mls"
 }
 
 # Лиги, для которых запрашиваем коэффициенты (для экономии кредитов)
 # Чем меньше лиг — тем меньше кредитов тратится
 ODDS_ACTIVE_LEAGUES = [
-    "champions_league", "epl", "laLiga", "bundesliga", "seriaA", "ligue1","portugueseLiga", "turkey", "eeredivisie", "greece"
+    "champions_league", "epl", "laLiga", "bundesliga", "seriaA", "ligue1","portugueseLiga", "turkey", "eredivisie", "greece" , "usa"
 ]
